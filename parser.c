@@ -1,10 +1,3 @@
-/*
-Consome tokens de lex e implementa a gramática da SAL.
-Cada não‑terminal corresponde a uma função específica.
-É o responsável por criar e encerrar escopos durante a análise.
-Interface: parse_program
-*/
-
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -13,6 +6,13 @@ Interface: parse_program
 
 static TInfoAtomo token_atual;
 
+static void parse_elemento(void);
+static void parse_print(void);
+static void parse_scan(void);
+static void parse_comando(void);
+static void parse_bloco(void);
+
+// Consome tokens de lex e implementa a gramática da SAL.
 static const char *nome_atomo(TAtomo atomo)
 {
     switch (atomo)
@@ -31,14 +31,26 @@ static const char *nome_atomo(TAtomo atomo)
         return "TK_START";
     case TK_END:
         return "TK_END";
+    case TK_PRINT:
+        return "TK_PRINT";
+    case TK_SCAN:
+        return "TK_SCAN";
     case IDENTIFICADOR:
         return "IDENTIFICADOR";
+    case STRING:
+        return "STRING";
+    case CONST_INT:
+        return "CONST_INT";
+    case CONST_CHAR:
+        return "CONST_CHAR";
     case PONTO_E_VIRGULA:
         return "PONTO_E_VIRGULA";
     case ABRE_PAR:
         return "ABRE_PAR";
     case FECHA_PAR:
         return "FECHA_PAR";
+    case VIRGULA:
+        return "VIRGULA";
     default:
         return "TOKEN_DESCONHECIDO";
     }
@@ -69,9 +81,91 @@ static void consumir(TAtomo esperado)
     avancar();
 }
 
-static void parse_block(void)
+// Cria e encerra escopos durante a análise.
+static void parse_elemento(void)
+{
+    if (token_atual.atomo == STRING)
+    {
+        consumir(STRING);
+    }
+    else if (token_atual.atomo == CONST_INT)
+    {
+        consumir(CONST_INT);
+    }
+    else if (token_atual.atomo == CONST_CHAR)
+    {
+        consumir(CONST_CHAR);
+    }
+    else if (token_atual.atomo == IDENTIFICADOR)
+    {
+        consumir(IDENTIFICADOR);
+    }
+    else
+    {
+        printf("Erro de sintaxe na linha %d: elemento invalido (%s)\n",
+               token_atual.linha,
+               token_atual.texto);
+        exit(1);
+    }
+}
+
+static void parse_print(void)
+{
+    consumir(TK_PRINT);
+    consumir(ABRE_PAR);
+
+    parse_elemento();
+
+    while (token_atual.atomo == VIRGULA)
+    {
+        consumir(VIRGULA);
+        parse_elemento();
+    }
+
+    consumir(FECHA_PAR);
+}
+
+static void parse_scan(void)
+{
+    consumir(TK_SCAN);
+    consumir(ABRE_PAR);
+    consumir(IDENTIFICADOR);
+    consumir(FECHA_PAR);
+}
+
+static void parse_comando(void)
+{
+    if (token_atual.atomo == TK_PRINT)
+    {
+        parse_print();
+    }
+    else if (token_atual.atomo == TK_SCAN)
+    {
+        parse_scan();
+    }
+    else if (token_atual.atomo == TK_START)
+    {
+        parse_bloco();
+    }
+    else
+    {
+        printf("Erro de sintaxe na linha %d: comando invalido (%s)\n",
+               token_atual.linha,
+               token_atual.texto);
+        exit(1);
+    }
+}
+
+static void parse_bloco(void)
 {
     consumir(TK_START);
+
+    while (token_atual.atomo != TK_END)
+    {
+        parse_comando();
+        consumir(PONTO_E_VIRGULA);
+    }
+
     consumir(TK_END);
 }
 
@@ -91,7 +185,7 @@ void parse_program(void)
     consumir(ABRE_PAR);
     consumir(FECHA_PAR);
 
-    parse_block();
+    parse_bloco();
 
     consumir(FIM_ARQUIVO);
 }
