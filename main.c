@@ -9,6 +9,7 @@ encerra todos os módulos de forma ordenada. Não realiza análise direta.
 #include <stdlib.h>
 
 #include "lex.h"
+#include "parser.h"
 
 // imprime os nomes dos enums pra debug
 const char *nome_categoria(TAtomo atomo)
@@ -138,7 +139,6 @@ int main()
 {
     // 1. O main processa a linha de comando via opt e inicializa os módulos.
     FILE *arquivo;
-    TInfoAtomo token;
 
     arquivo = fopen("arquivo.sal", "r");
 
@@ -154,13 +154,9 @@ int main()
         return 1;
     }
 
-    do
-    {
-        token = lex_next();
-        printf("Token lido: %s\n", token.texto);
-        printf("Linha: %d\n", token.linha);
-        printf("Categoria: %s\n", nome_categoria(token.atomo));
-    } while (token.atomo != FIM_ARQUIVO);
+    parser_init();
+    parse_program();
+    printf("Analise sintatica concluida com sucesso. \n");
 
     // 2. Concluída a análise (com sucesso ou erro), o main finaliza os módulos, fecha os arquivos e encerra a execução.
     fclose(arquivo);
