@@ -6,11 +6,15 @@
 
 static TInfoAtomo token_atual;
 
-static void parse_elemento(void);
 static void parse_print(void);
 static void parse_scan(void);
+static void parse_atribuicao(void);
 static void parse_comando(void);
 static void parse_bloco(void);
+
+static void parse_expr(void);
+static void parse_termo(void);
+static void parse_fator(void);
 
 // Consome tokens de lex e implementa a gramática da SAL.
 static const char *nome_atomo(TAtomo atomo)
@@ -82,11 +86,11 @@ static void consumir(TAtomo esperado)
 }
 
 // Cria e encerra escopos durante a análise.
-static void parse_elemento(void)
+static void parse_fator(void)
 {
-    if (token_atual.atomo == STRING)
+    if (token_atual.atomo == IDENTIFICADOR)
     {
-        consumir(STRING);
+        consumir(IDENTIFICADOR);
     }
     else if (token_atual.atomo == CONST_INT)
     {
@@ -96,16 +100,60 @@ static void parse_elemento(void)
     {
         consumir(CONST_CHAR);
     }
-    else if (token_atual.atomo == IDENTIFICADOR)
+    else if (token_atual.atomo == STRING)
     {
-        consumir(IDENTIFICADOR);
+        consumir(STRING);
+    }
+    else if (token_atual.atomo == ABRE_PAR)
+    {
+        consumir(ABRE_PAR);
+        parse_expr();
+        consumir(FECHA_PAR);
     }
     else
     {
-        printf("Erro de sintaxe na linha %d: elemento invalido (%s)\n",
+        printf("Erro de sintaxe na linha %d: fator invalido (%s)\n",
                token_atual.linha,
                token_atual.texto);
         exit(1);
+    }
+}
+
+static void parse_termo(void)
+{
+    parse_fator();
+
+    while (token_atual.atomo == MULTIPLICACAO || token_atual.atomo == DIVISAO)
+    {
+        if (token_atual.atomo == MULTIPLICACAO)
+        {
+            consumir(MULTIPLICACAO);
+        }
+        else
+        {
+            consumir(DIVISAO);
+        }
+
+        parse_fator();
+    }
+}
+
+static void parse_expr(void)
+{
+    parse_termo();
+
+    while (token_atual.atomo == SOMA || token_atual.atomo == SUBTRACAO)
+    {
+        if (token_atual.atomo == SOMA)
+        {
+            consumir(SOMA);
+        }
+        else
+        {
+            consumir(SUBTRACAO);
+        }
+
+        parse_termo();
     }
 }
 
@@ -114,12 +162,12 @@ static void parse_print(void)
     consumir(TK_PRINT);
     consumir(ABRE_PAR);
 
-    parse_elemento();
+    parse_expr();
 
     while (token_atual.atomo == VIRGULA)
     {
         consumir(VIRGULA);
-        parse_elemento();
+        parse_expr();
     }
 
     consumir(FECHA_PAR);
@@ -147,6 +195,10 @@ static void parse_comando(void)
     {
         parse_bloco();
     }
+    else if (token_atual.atomo == IDENTIFICADOR)
+    {
+        parse_atribuicao();
+    }
     else
     {
         printf("Erro de sintaxe na linha %d: comando invalido (%s)\n",
@@ -154,6 +206,13 @@ static void parse_comando(void)
                token_atual.texto);
         exit(1);
     }
+}
+
+static void parse_atribuicao(void)
+{
+    consumir(IDENTIFICADOR);
+    consumir(ATRIBUICAO);
+    parse_expr();
 }
 
 static void parse_bloco(void)
