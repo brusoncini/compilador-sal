@@ -13,10 +13,25 @@ static void parse_comando(void);
 static void parse_bloco(void);
 
 static void parse_expr(void);
-static void parse_termo(void);
+static void parse_and(void);
+static void parse_relacional(void);
+static void parse_soma_sub(void);
+static void parse_mult_div(void);
 static void parse_fator(void);
 
-// Consome tokens de lex e implementa a gramática da SAL.
+static int eh_relacional(TAtomo atomo);
+
+/*
+ As expressoes sao analisadas na seguinte ordem:
+    - parse_expr: v
+    - parse_and: ^
+    - parse_relacional: > < >= <= = <>
+    - parse_soma_sub: + -
+    - parse_mult_div: * /
+    - parse_fator: id, constantes, parenteses e unarios
+*/
+
+// Funcao apenas para debug: usa nomes mais claros
 static const char *nome_atomo(TAtomo atomo)
 {
     switch (atomo)
@@ -39,22 +54,54 @@ static const char *nome_atomo(TAtomo atomo)
         return "TK_PRINT";
     case TK_SCAN:
         return "TK_SCAN";
+    case TK_TRUE:
+        return "TK_TRUE";
+    case TK_FALSE:
+        return "TK_FALSE";
     case IDENTIFICADOR:
         return "IDENTIFICADOR";
-    case STRING:
-        return "STRING";
     case CONST_INT:
         return "CONST_INT";
     case CONST_CHAR:
         return "CONST_CHAR";
-    case PONTO_E_VIRGULA:
-        return "PONTO_E_VIRGULA";
+    case STRING:
+        return "STRING";
+    case ATRIBUICAO:
+        return "ATRIBUICAO";
+    case SOMA:
+        return "SOMA";
+    case SUBTRACAO:
+        return "SUBTRACAO";
+    case MULTIPLICACAO:
+        return "MULTIPLICACAO";
+    case DIVISAO:
+        return "DIVISAO";
+    case IGUAL:
+        return "IGUAL";
+    case DIFERENTE:
+        return "DIFERENTE";
+    case MAIOR:
+        return "MAIOR";
+    case MENOR:
+        return "MENOR";
+    case MAIOR_IGUAL:
+        return "MAIOR_IGUAL";
+    case MENOR_IGUAL:
+        return "MENOR_IGUAL";
+    case E_LOGICO:
+        return "E_LOGICO";
+    case OU_LOGICO:
+        return "OU_LOGICO";
+    case NEGACAO:
+        return "NEGACAO";
     case ABRE_PAR:
         return "ABRE_PAR";
     case FECHA_PAR:
         return "FECHA_PAR";
     case VIRGULA:
         return "VIRGULA";
+    case PONTO_E_VIRGULA:
+        return "PONTO_E_VIRGULA";
     default:
         return "TOKEN_DESCONHECIDO";
     }
@@ -85,10 +132,30 @@ static void consumir(TAtomo esperado)
     avancar();
 }
 
-// Cria e encerra escopos durante a análise.
+static int eh_relacional(TAtomo atomo)
+{
+    return atomo == IGUAL ||
+           atomo == DIFERENTE ||
+           atomo == MAIOR ||
+           atomo == MENOR ||
+           atomo == MAIOR_IGUAL ||
+           atomo == MENOR_IGUAL;
+}
+
+// O fator é a menor unidade da expressão
 static void parse_fator(void)
 {
-    if (token_atual.atomo == IDENTIFICADOR)
+    if (token_atual.atomo == NEGACAO)
+    {
+        consumir(NEGACAO);
+        parse_fator();
+    }
+    else if (token_atual.atomo == SUBTRACAO)
+    {
+        consumir(SUBTRACAO);
+        parse_fator();
+    }
+    else if (token_atual.atomo == IDENTIFICADOR)
     {
         consumir(IDENTIFICADOR);
     }
@@ -103,6 +170,14 @@ static void parse_fator(void)
     else if (token_atual.atomo == STRING)
     {
         consumir(STRING);
+    }
+    else if (token_atual.atomo == TK_TRUE)
+    {
+        consumir(TK_TRUE);
+    }
+    else if (token_atual.atomo == TK_FALSE)
+    {
+        consumir(TK_FALSE);
     }
     else if (token_atual.atomo == ABRE_PAR)
     {
@@ -119,7 +194,7 @@ static void parse_fator(void)
     }
 }
 
-static void parse_termo(void)
+static void parse_mult_div(void)
 {
     parse_fator();
 
@@ -138,9 +213,9 @@ static void parse_termo(void)
     }
 }
 
-static void parse_expr(void)
+static void parse_soma_sub(void)
 {
-    parse_termo();
+    parse_mult_div();
 
     while (token_atual.atomo == SOMA || token_atual.atomo == SUBTRACAO)
     {
@@ -153,7 +228,41 @@ static void parse_expr(void)
             consumir(SUBTRACAO);
         }
 
-        parse_termo();
+        parse_mult_div();
+    }
+}
+
+static void parse_relacional(void)
+{
+    parse_soma_sub();
+
+    while (eh_relacional(token_atual.atomo))
+    {
+        TAtomo operador = token_atual.atomo;
+        consumir(operador);
+        parse_soma_sub();
+    }
+}
+
+static void parse_and(void)
+{
+    parse_relacional();
+
+    while (token_atual.atomo == E_LOGICO)
+    {
+        consumir(E_LOGICO);
+        parse_relacional();
+    }
+}
+
+static void parse_expr(void)
+{
+    parse_and();
+
+    while (token_atual.atomo == OU_LOGICO)
+    {
+        consumir(OU_LOGICO);
+        parse_and();
     }
 }
 
@@ -181,6 +290,13 @@ static void parse_scan(void)
     consumir(FECHA_PAR);
 }
 
+static void parse_atribuicao(void)
+{
+    consumir(IDENTIFICADOR);
+    consumir(ATRIBUICAO);
+    parse_expr();
+}
+
 static void parse_comando(void)
 {
     if (token_atual.atomo == TK_PRINT)
@@ -206,13 +322,6 @@ static void parse_comando(void)
                token_atual.texto);
         exit(1);
     }
-}
-
-static void parse_atribuicao(void)
-{
-    consumir(IDENTIFICADOR);
-    consumir(ATRIBUICAO);
-    parse_expr();
 }
 
 static void parse_bloco(void)
