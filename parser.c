@@ -6,20 +6,16 @@
 
 static TInfoAtomo token_atual;
 
+static TInfoAtomo token_atual;
+
+// Comandos
 static void parse_print(void);
 static void parse_scan(void);
 static void parse_atribuicao(void);
+static void parse_if(void);
+static void parse_ret(void);
 static void parse_comando(void);
 static void parse_bloco(void);
-
-static void parse_expr(void);
-static void parse_and(void);
-static void parse_relacional(void);
-static void parse_soma_sub(void);
-static void parse_mult_div(void);
-static void parse_fator(void);
-
-static int eh_relacional(TAtomo atomo);
 
 /*
  As expressoes sao analisadas na seguinte ordem:
@@ -30,6 +26,16 @@ static int eh_relacional(TAtomo atomo);
     - parse_mult_div: * /
     - parse_fator: id, constantes, parenteses e unarios
 */
+
+// Expressoes
+static void parse_expr(void);
+static void parse_and(void);
+static void parse_relacional(void);
+static void parse_soma_sub(void);
+static void parse_mult_div(void);
+static void parse_fator(void);
+
+static int eh_relacional(TAtomo atomo);
 
 // Funcao apenas para debug: usa nomes mais claros
 static const char *nome_atomo(TAtomo atomo)
@@ -102,6 +108,12 @@ static const char *nome_atomo(TAtomo atomo)
         return "VIRGULA";
     case PONTO_E_VIRGULA:
         return "PONTO_E_VIRGULA";
+    case TK_IF:
+        return "TK_IF";
+    case TK_ELSE:
+        return "TK_ELSE";
+    case TK_RET:
+        return "TK_RET";
     default:
         return "TOKEN_DESCONHECIDO";
     }
@@ -192,6 +204,28 @@ static void parse_fator(void)
                token_atual.texto);
         exit(1);
     }
+}
+
+static void parse_if(void)
+{
+    consumir(TK_IF);
+    consumir(ABRE_PAR);
+    parse_expr();
+    consumir(FECHA_PAR);
+
+    parse_comando();
+
+    if (token_atual.atomo == TK_ELSE)
+    {
+        consumir(TK_ELSE);
+        parse_comando();
+    }
+}
+
+static void parse_ret(void)
+{
+    consumir(TK_RET);
+    parse_expr();
 }
 
 static void parse_mult_div(void)
@@ -307,9 +341,17 @@ static void parse_comando(void)
     {
         parse_scan();
     }
+    else if (token_atual.atomo == TK_IF)
+    {
+        parse_if();
+    }
     else if (token_atual.atomo == TK_START)
     {
         parse_bloco();
+    }
+    else if (token_atual.atomo == TK_RET)
+    {
+        parse_ret();
     }
     else if (token_atual.atomo == IDENTIFICADOR)
     {
