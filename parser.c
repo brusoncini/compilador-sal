@@ -14,6 +14,10 @@ static void parse_if(void);
 static void parse_ret(void);
 static void parse_loop(void);
 static void parse_for(void);
+static void parse_match(void);
+static void parse_when(void);
+static void parse_condicao_when(void);
+static void parse_item_when(void);
 static void parse_comando(void);
 static void parse_bloco(void);
 
@@ -128,6 +132,16 @@ static const char *nome_atomo(TAtomo atomo)
         return "TK_STEP";
     case TK_DO:
         return "TK_DO";
+    case TK_MATCH:
+        return "TK_MATCH";
+    case TK_WHEN:
+        return "TK_WHEN";
+    case TK_OTHERWISE:
+        return "TK_OTHERWISE";
+    case IMPLICA:
+        return "IMPLICA";
+    case INTERVALO:
+        return "INTERVALO";
     default:
         return "TOKEN_DESCONHECIDO";
     }
@@ -293,6 +307,72 @@ static void parse_for(void)
     parse_comando();
 }
 
+// Comandos para parse de match
+static void parse_item_when(void)
+{
+    if (token_atual.atomo == SUBTRACAO)
+    {
+        consumir(SUBTRACAO);
+    }
+
+    consumir(CONST_INT);
+
+    if (token_atual.atomo == INTERVALO)
+    {
+        consumir(INTERVALO);
+
+        if (token_atual.atomo == SUBTRACAO)
+        {
+            consumir(SUBTRACAO);
+        }
+
+        consumir(CONST_INT);
+    }
+}
+
+static void parse_condicao_when(void)
+{
+    parse_item_when();
+
+    while (token_atual.atomo == VIRGULA)
+    {
+        consumir(VIRGULA);
+        parse_item_when();
+    }
+}
+
+static void parse_when(void)
+{
+    consumir(TK_WHEN);
+    parse_condicao_when();
+    consumir(IMPLICA);
+    parse_comando();
+    consumir(PONTO_E_VIRGULA);
+}
+
+static void parse_match(void)
+{
+    consumir(TK_MATCH);
+    consumir(ABRE_PAR);
+    parse_expr();
+    consumir(FECHA_PAR);
+
+    while (token_atual.atomo == TK_WHEN)
+    {
+        parse_when();
+    }
+
+    if (token_atual.atomo == TK_OTHERWISE)
+    {
+        consumir(TK_OTHERWISE);
+        consumir(IMPLICA);
+        parse_comando();
+        consumir(PONTO_E_VIRGULA);
+    }
+
+    consumir(TK_END);
+}
+
 static void parse_mult_div(void)
 {
     parse_fator();
@@ -425,6 +505,10 @@ static void parse_comando(void)
     else if (token_atual.atomo == TK_FOR)
     {
         parse_for();
+    }
+    else if (token_atual.atomo == TK_MATCH)
+    {
+        parse_match();
     }
     else if (token_atual.atomo == IDENTIFICADOR)
     {
