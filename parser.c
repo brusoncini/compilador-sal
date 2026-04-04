@@ -6,14 +6,14 @@
 
 static TInfoAtomo token_atual;
 
-static TInfoAtomo token_atual;
-
 // Comandos
 static void parse_print(void);
 static void parse_scan(void);
 static void parse_atribuicao(void);
 static void parse_if(void);
 static void parse_ret(void);
+static void parse_loop(void);
+static void parse_for(void);
 static void parse_comando(void);
 static void parse_bloco(void);
 
@@ -114,6 +114,20 @@ static const char *nome_atomo(TAtomo atomo)
         return "TK_ELSE";
     case TK_RET:
         return "TK_RET";
+    case TK_LOOP:
+        return "TK_LOOP";
+    case TK_WHILE:
+        return "TK_WHILE";
+    case TK_UNTIL:
+        return "TK_UNTIL";
+    case TK_FOR:
+        return "TK_FOR";
+    case TK_TO:
+        return "TK_TO";
+    case TK_STEP:
+        return "TK_STEP";
+    case TK_DO:
+        return "TK_DO";
     default:
         return "TOKEN_DESCONHECIDO";
     }
@@ -226,6 +240,57 @@ static void parse_ret(void)
 {
     consumir(TK_RET);
     parse_expr();
+}
+
+static void parse_loop(void)
+{
+    consumir(TK_LOOP);
+
+    // Caso loop while
+    if (token_atual.atomo == TK_WHILE)
+    {
+        consumir(TK_WHILE);
+        consumir(ABRE_PAR);
+        parse_expr();
+        consumir(FECHA_PAR);
+
+        parse_comando();
+    }
+    else
+    {
+        // Caso loop until
+        while (token_atual.atomo != TK_UNTIL)
+        {
+            parse_comando();
+            consumir(PONTO_E_VIRGULA);
+        }
+
+        consumir(TK_UNTIL);
+        consumir(ABRE_PAR);
+        parse_expr();
+        consumir(FECHA_PAR);
+    }
+}
+
+static void parse_for(void)
+{
+    consumir(TK_FOR);
+
+    consumir(IDENTIFICADOR);
+    consumir(ATRIBUICAO);
+    parse_expr();
+
+    consumir(TK_TO);
+    parse_expr();
+
+    if (token_atual.atomo == TK_STEP)
+    {
+        consumir(TK_STEP);
+        parse_expr();
+    }
+
+    consumir(TK_DO);
+    parse_comando();
 }
 
 static void parse_mult_div(void)
@@ -352,6 +417,14 @@ static void parse_comando(void)
     else if (token_atual.atomo == TK_RET)
     {
         parse_ret();
+    }
+    else if (token_atual.atomo == TK_LOOP)
+    {
+        parse_loop();
+    }
+    else if (token_atual.atomo == TK_FOR)
+    {
+        parse_for();
     }
     else if (token_atual.atomo == IDENTIFICADOR)
     {
