@@ -21,6 +21,12 @@ static void parse_item_when(void);
 static void parse_comando(void);
 static void parse_bloco(void);
 
+// Declaracoes
+static void parse_tipo(void);
+static void parse_declaracao(void);
+static void parse_globals(void);
+static void parse_locals(void);
+
 /*
  As expressoes sao analisadas na seguinte ordem:
     - parse_expr: v
@@ -56,6 +62,8 @@ static const char *nome_atomo(TAtomo atomo)
         return "TK_PROC";
     case TK_MAIN:
         return "TK_MAIN";
+    case TK_GLOBALS:
+        return "TK_GLOBALS";
     case TK_START:
         return "TK_START";
     case TK_END:
@@ -68,6 +76,12 @@ static const char *nome_atomo(TAtomo atomo)
         return "TK_TRUE";
     case TK_FALSE:
         return "TK_FALSE";
+    case TK_INT:
+        return "TK_INT";
+    case TK_BOOL:
+        return "TK_BOOL";
+    case TK_CHAR:
+        return "TK_CHAR";
     case IDENTIFICADOR:
         return "IDENTIFICADOR";
     case CONST_INT:
@@ -112,6 +126,8 @@ static const char *nome_atomo(TAtomo atomo)
         return "VIRGULA";
     case PONTO_E_VIRGULA:
         return "PONTO_E_VIRGULA";
+    case DOIS_PONTOS:
+        return "DOIS_PONTOS";
     case TK_IF:
         return "TK_IF";
     case TK_ELSE:
@@ -142,6 +158,8 @@ static const char *nome_atomo(TAtomo atomo)
         return "IMPLICA";
     case INTERVALO:
         return "INTERVALO";
+    case TK_LOCALS:
+        return "TK_LOCALS";
     default:
         return "TOKEN_DESCONHECIDO";
     }
@@ -180,6 +198,67 @@ static int eh_relacional(TAtomo atomo)
            atomo == MENOR ||
            atomo == MAIOR_IGUAL ||
            atomo == MENOR_IGUAL;
+}
+
+// Declaracoes de tipo: int, bool, char
+static void parse_tipo(void)
+{
+    if (token_atual.atomo == TK_INT)
+    {
+        consumir(TK_INT);
+    }
+    else if (token_atual.atomo == TK_BOOL)
+    {
+        consumir(TK_BOOL);
+    }
+    else if (token_atual.atomo == TK_CHAR)
+    {
+        consumir(TK_CHAR);
+    }
+    else
+    {
+        printf("Erro de sintaxe na linha %d: tipo invalido (%s)\n",
+               token_atual.linha,
+               token_atual.texto);
+        exit(1);
+    }
+}
+
+// Declaracao simples: x, y, z: int;
+static void parse_declaracao(void)
+{
+    consumir(IDENTIFICADOR);
+
+    while (token_atual.atomo == VIRGULA)
+    {
+        consumir(VIRGULA);
+        consumir(IDENTIFICADOR);
+    }
+
+    consumir(DOIS_PONTOS);
+    parse_tipo();
+    consumir(PONTO_E_VIRGULA);
+}
+
+// Secao globals opcional
+static void parse_globals(void)
+{
+    consumir(TK_GLOBALS);
+
+    while (token_atual.atomo == IDENTIFICADOR)
+    {
+        parse_declaracao();
+    }
+}
+
+static void parse_locals(void)
+{
+    consumir(TK_LOCALS);
+
+    while (token_atual.atomo == IDENTIFICADOR)
+    {
+        parse_declaracao();
+    }
 }
 
 // O fator é a menor unidade da expressão
@@ -547,10 +626,20 @@ void parse_program(void)
     consumir(IDENTIFICADOR);
     consumir(PONTO_E_VIRGULA);
 
+    if (token_atual.atomo == TK_GLOBALS)
+    {
+        parse_globals();
+    }
+
     consumir(TK_PROC);
     consumir(TK_MAIN);
     consumir(ABRE_PAR);
     consumir(FECHA_PAR);
+
+    if (token_atual.atomo == TK_LOCALS)
+    {
+        parse_locals();
+    }
 
     parse_bloco();
 
