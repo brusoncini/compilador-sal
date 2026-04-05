@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "lex.h"
 #include "parser.h"
@@ -23,9 +24,12 @@ static void parse_bloco(void);
 
 // Declaracoes
 static void parse_tipo(void);
+static void parse_identificador_declaracao(void);
 static void parse_declaracao(void);
 static void parse_globals(void);
 static void parse_locals(void);
+static int eh_ou_logico(void);
+static void consumir_ou_logico(void);
 
 /*
  As expressoes sao analisadas na seguinte ordem:
@@ -160,6 +164,10 @@ static const char *nome_atomo(TAtomo atomo)
         return "INTERVALO";
     case TK_LOCALS:
         return "TK_LOCALS";
+    case ABRE_COL:
+        return "ABRE_COL";
+    case FECHA_COL:
+        return "FECHA_COL";
     default:
         return "TOKEN_DESCONHECIDO";
     }
@@ -200,6 +208,33 @@ static int eh_relacional(TAtomo atomo)
            atomo == MENOR_IGUAL;
 }
 
+// Diferencia v (OU lógico) de 'v' (caractere)
+static int eh_ou_logico(void)
+{
+    return token_atual.atomo == OU_LOGICO ||
+           (token_atual.atomo == IDENTIFICADOR && strcmp(token_atual.texto, "v") == 0);
+}
+
+static void consumir_ou_logico(void)
+{
+    if (token_atual.atomo == OU_LOGICO)
+    {
+        consumir(OU_LOGICO);
+    }
+    else if (token_atual.atomo == IDENTIFICADOR && strcmp(token_atual.texto, "v") == 0)
+    {
+        avancar();
+    }
+    else
+    {
+        printf("Erro de sintaxe na linha %d: esperado operador logico v, encontrado %s (%s)\n",
+               token_atual.linha,
+               nome_atomo(token_atual.atomo),
+               token_atual.texto);
+        exit(1);
+    }
+}
+
 // Declaracoes de tipo: int, bool, char
 static void parse_tipo(void)
 {
@@ -227,17 +262,29 @@ static void parse_tipo(void)
 // Declaracao simples: x, y, z: int;
 static void parse_declaracao(void)
 {
-    consumir(IDENTIFICADOR);
+    parse_identificador_declaracao();
 
     while (token_atual.atomo == VIRGULA)
     {
         consumir(VIRGULA);
-        consumir(IDENTIFICADOR);
+        parse_identificador_declaracao();
     }
 
     consumir(DOIS_PONTOS);
     parse_tipo();
     consumir(PONTO_E_VIRGULA);
+}
+
+static void parse_identificador_declaracao(void)
+{
+    consumir(IDENTIFICADOR);
+
+    if (token_atual.atomo == ABRE_COL)
+    {
+        consumir(ABRE_COL);
+        consumir(CONST_INT);
+        consumir(FECHA_COL);
+    }
 }
 
 // Secao globals opcional
@@ -517,9 +564,9 @@ static void parse_expr(void)
 {
     parse_and();
 
-    while (token_atual.atomo == OU_LOGICO)
+    while (eh_ou_logico())
     {
-        consumir(OU_LOGICO);
+        consumir_ou_logico();
         parse_and();
     }
 }

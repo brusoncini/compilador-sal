@@ -152,11 +152,6 @@ static TAtomo reconhece_palavra(const char texto[])
             return TK_UNTIL;
         break;
 
-    case 'v':
-        if (strcmp(texto, "v") == 0)
-            return OU_LOGICO;
-        break;
-
     case 'w':
         if (strcmp(texto, "when") == 0)
             return TK_WHEN;
