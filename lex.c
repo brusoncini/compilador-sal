@@ -550,67 +550,124 @@ const char *lex_nome_atomo(TAtomo atomo)
 {
     switch (atomo)
     {
-    case CONST_INT: return "sCTEINT";
-    case CONST_CHAR: return "sCTECHAR";
-    case STRING: return "sSTRING";
-    case IDENTIFICADOR: return "sIDENTIF";
+    case CONST_INT:
+        return "sCTEINT";
+    case CONST_CHAR:
+        return "sCTECHAR";
+    case STRING:
+        return "sSTRING";
+    case IDENTIFICADOR:
+        return "sIDENTIF";
 
-    case TK_MODULE: return "sMODULE";
-    case TK_PROC: return "sPROC";
-    case TK_FN: return "sFN";
-    case TK_MAIN: return "sMAIN";
-    case TK_GLOBALS: return "sGLOBALS";
-    case TK_LOCALS: return "sLOCALS";
-    case TK_START: return "sSTART";
-    case TK_END: return "sEND";
-    case TK_IF: return "sIF";
-    case TK_ELSE: return "sELSE";
-    case TK_MATCH: return "sMATCH";
-    case TK_WHEN: return "sWHEN";
-    case TK_OTHERWISE: return "sOTHERWISE";
-    case TK_FOR: return "sFOR";
-    case TK_TO: return "sTO";
-    case TK_STEP: return "sSTEP";
-    case TK_DO: return "sDO";
-    case TK_LOOP: return "sLOOP";
-    case TK_WHILE: return "sWHILE";
-    case TK_UNTIL: return "sUNTIL";
-    case TK_PRINT: return "sPRINT";
-    case TK_SCAN: return "sSCAN";
-    case TK_RET: return "sRETURN";
-    case TK_INT: return "sINT";
-    case TK_BOOL: return "sBOOL";
-    case TK_CHAR: return "sCHAR";
-    case TK_TRUE: return "sTRUE";
-    case TK_FALSE: return "sFALSE";
+    case TK_MODULE:
+        return "sMODULE";
+    case TK_PROC:
+        return "sPROC";
+    case TK_FN:
+        return "sFN";
+    case TK_MAIN:
+        return "sMAIN";
+    case TK_GLOBALS:
+        return "sGLOBALS";
+    case TK_LOCALS:
+        return "sLOCALS";
+    case TK_START:
+        return "sSTART";
+    case TK_END:
+        return "sEND";
+    case TK_IF:
+        return "sIF";
+    case TK_ELSE:
+        return "sELSE";
+    case TK_MATCH:
+        return "sMATCH";
+    case TK_WHEN:
+        return "sWHEN";
+    case TK_OTHERWISE:
+        return "sOTHERWISE";
+    case TK_FOR:
+        return "sFOR";
+    case TK_TO:
+        return "sTO";
+    case TK_STEP:
+        return "sSTEP";
+    case TK_DO:
+        return "sDO";
+    case TK_LOOP:
+        return "sLOOP";
+    case TK_WHILE:
+        return "sWHILE";
+    case TK_UNTIL:
+        return "sUNTIL";
+    case TK_PRINT:
+        return "sPRINT";
+    case TK_SCAN:
+        return "sSCAN";
+    case TK_RET:
+        return "sRETURN";
+    case TK_INT:
+        return "sINT";
+    case TK_BOOL:
+        return "sBOOL";
+    case TK_CHAR:
+        return "sCHAR";
+    case TK_TRUE:
+        return "sTRUE";
+    case TK_FALSE:
+        return "sFALSE";
 
-    case ATRIBUICAO: return "sATRIB";
-    case SOMA: return "sSOMA";
-    case SUBTRACAO: return "sSUBRAT";
-    case MULTIPLICACAO: return "sMULT";
-    case DIVISAO: return "sDIV";
-    case IGUAL: return "sIGUAL";
-    case DIFERENTE: return "sDIFERENTE";
-    case MAIOR: return "sMAIOR";
-    case MENOR: return "sMENOR";
-    case MAIOR_IGUAL: return "sMAIORIG";
-    case MENOR_IGUAL: return "sMENORIG";
-    case E_LOGICO: return "sAND";
-    case OU_LOGICO: return "sOR";
-    case NEGACAO: return "sNEG";
+    case ATRIBUICAO:
+        return "sATRIB";
+    case SOMA:
+        return "sSOMA";
+    case SUBTRACAO:
+        return "sSUBRAT";
+    case MULTIPLICACAO:
+        return "sMULT";
+    case DIVISAO:
+        return "sDIV";
+    case IGUAL:
+        return "sIGUAL";
+    case DIFERENTE:
+        return "sDIFERENTE";
+    case MAIOR:
+        return "sMAIOR";
+    case MENOR:
+        return "sMENOR";
+    case MAIOR_IGUAL:
+        return "sMAIORIG";
+    case MENOR_IGUAL:
+        return "sMENORIG";
+    case E_LOGICO:
+        return "sAND";
+    case OU_LOGICO:
+        return "sOR";
+    case NEGACAO:
+        return "sNEG";
 
-    case ABRE_PAR: return "sABREPAR";
-    case FECHA_PAR: return "sFECHAPAR";
-    case ABRE_COL: return "sABRECOL";
-    case FECHA_COL: return "sFECHACOL";
-    case VIRGULA: return "sVIRGULA";
-    case PONTO_E_VIRGULA: return "sPONTOVIRG";
-    case DOIS_PONTOS: return "sDOISPONTOS";
-    case INTERVALO: return "sPTOPTO";
-    case IMPLICA: return "sIMPLIC";
+    case ABRE_PAR:
+        return "sABREPAR";
+    case FECHA_PAR:
+        return "sFECHAPAR";
+    case ABRE_COL:
+        return "sABRECOL";
+    case FECHA_COL:
+        return "sFECHACOL";
+    case VIRGULA:
+        return "sVIRGULA";
+    case PONTO_E_VIRGULA:
+        return "sPONTOVIRG";
+    case DOIS_PONTOS:
+        return "sDOISPONTOS";
+    case INTERVALO:
+        return "sPTOPTO";
+    case IMPLICA:
+        return "sIMPLIC";
 
-    case ERRO: return "sERRO";
-    case FIM_ARQUIVO: return "sEOF";
+    case ERRO:
+        return "sERRO";
+    case FIM_ARQUIVO:
+        return "sEOF";
     }
 
     return "sDESCONHECIDO";
@@ -618,7 +675,21 @@ const char *lex_nome_atomo(TAtomo atomo)
 
 static TInfoAtomo devolver_token(TInfoAtomo token)
 {
-    log_token(token);
+    static int eof_ja_registrado = 0;
+
+    if (token.atomo == FIM_ARQUIVO)
+    {
+        if (!eof_ja_registrado)
+        {
+            log_token(token);
+            eof_ja_registrado = 1;
+        }
+    }
+    else
+    {
+        log_token(token);
+    }
+
     return token;
 }
 
