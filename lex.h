@@ -1,13 +1,15 @@
+#ifndef LEX_H
+#define LEX_H
+
 #include <stdio.h>
 
 typedef enum
 {
-    // literais
     CONST_INT,
     CONST_CHAR,
     STRING,
     IDENTIFICADOR,
-    // palavras reservadas
+
     TK_MODULE,
     TK_PROC,
     TK_FN,
@@ -36,7 +38,7 @@ typedef enum
     TK_CHAR,
     TK_TRUE,
     TK_FALSE,
-    // operadores
+
     ATRIBUICAO,
     SOMA,
     SUBTRACAO,
@@ -51,7 +53,7 @@ typedef enum
     E_LOGICO,
     OU_LOGICO,
     NEGACAO,
-    // delimitadores
+
     ABRE_PAR,
     FECHA_PAR,
     ABRE_COL,
@@ -61,9 +63,10 @@ typedef enum
     DOIS_PONTOS,
     INTERVALO,
     IMPLICA,
-    // controle
+
     ERRO,
     FIM_ARQUIVO
+
 } TAtomo;
 
 typedef struct
@@ -72,8 +75,13 @@ typedef struct
     int linha;
     int atributo_numero;
     char texto[100];
+
 } TInfoAtomo;
 
 int lex_init(FILE *arquivo);
 
 TInfoAtomo lex_next(void);
+
+const char *lex_nome_atomo(TAtomo atomo);
+
+#endif

@@ -1,14 +1,9 @@
-/*
-    Varredura sequencial do código‑fonte, devolvendo um token por chamada.
-    Mantém posição exata no arquivo e distingue corretamente todas as categorias lexicais da SAL.
-    Interface: lex_next
-*/
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "lex.h"
+#include "log.h"
 
 static FILE *fonte = NULL;
 static int linha_atual = 1;
@@ -551,32 +546,108 @@ int lex_init(FILE *arquivo)
     return 1;
 }
 
+const char *lex_nome_atomo(TAtomo atomo)
+{
+    switch (atomo)
+    {
+    case CONST_INT: return "sCTEINT";
+    case CONST_CHAR: return "sCTECHAR";
+    case STRING: return "sSTRING";
+    case IDENTIFICADOR: return "sIDENTIF";
+
+    case TK_MODULE: return "sMODULE";
+    case TK_PROC: return "sPROC";
+    case TK_FN: return "sFN";
+    case TK_MAIN: return "sMAIN";
+    case TK_GLOBALS: return "sGLOBALS";
+    case TK_LOCALS: return "sLOCALS";
+    case TK_START: return "sSTART";
+    case TK_END: return "sEND";
+    case TK_IF: return "sIF";
+    case TK_ELSE: return "sELSE";
+    case TK_MATCH: return "sMATCH";
+    case TK_WHEN: return "sWHEN";
+    case TK_OTHERWISE: return "sOTHERWISE";
+    case TK_FOR: return "sFOR";
+    case TK_TO: return "sTO";
+    case TK_STEP: return "sSTEP";
+    case TK_DO: return "sDO";
+    case TK_LOOP: return "sLOOP";
+    case TK_WHILE: return "sWHILE";
+    case TK_UNTIL: return "sUNTIL";
+    case TK_PRINT: return "sPRINT";
+    case TK_SCAN: return "sSCAN";
+    case TK_RET: return "sRETURN";
+    case TK_INT: return "sINT";
+    case TK_BOOL: return "sBOOL";
+    case TK_CHAR: return "sCHAR";
+    case TK_TRUE: return "sTRUE";
+    case TK_FALSE: return "sFALSE";
+
+    case ATRIBUICAO: return "sATRIB";
+    case SOMA: return "sSOMA";
+    case SUBTRACAO: return "sSUBRAT";
+    case MULTIPLICACAO: return "sMULT";
+    case DIVISAO: return "sDIV";
+    case IGUAL: return "sIGUAL";
+    case DIFERENTE: return "sDIFERENTE";
+    case MAIOR: return "sMAIOR";
+    case MENOR: return "sMENOR";
+    case MAIOR_IGUAL: return "sMAIORIG";
+    case MENOR_IGUAL: return "sMENORIG";
+    case E_LOGICO: return "sAND";
+    case OU_LOGICO: return "sOR";
+    case NEGACAO: return "sNEG";
+
+    case ABRE_PAR: return "sABREPAR";
+    case FECHA_PAR: return "sFECHAPAR";
+    case ABRE_COL: return "sABRECOL";
+    case FECHA_COL: return "sFECHACOL";
+    case VIRGULA: return "sVIRGULA";
+    case PONTO_E_VIRGULA: return "sPONTOVIRG";
+    case DOIS_PONTOS: return "sDOISPONTOS";
+    case INTERVALO: return "sPTOPTO";
+    case IMPLICA: return "sIMPLIC";
+
+    case ERRO: return "sERRO";
+    case FIM_ARQUIVO: return "sEOF";
+    }
+
+    return "sDESCONHECIDO";
+}
+
+static TInfoAtomo devolver_token(TInfoAtomo token)
+{
+    log_token(token);
+    return token;
+}
+
 TInfoAtomo lex_next(void)
 {
     int c = ignora_espacos();
 
     if (c == EOF)
     {
-        return criar_token(FIM_ARQUIVO, "EOF");
+        return devolver_token(criar_token(FIM_ARQUIVO, "EOF"));
     }
 
     if (eh_inicio_identificador(c))
     {
-        return ler_palavra(c);
+        return devolver_token(ler_palavra(c));
     }
 
     if (eh_digito(c))
     {
-        return ler_numero(c);
+        return devolver_token(ler_numero(c));
     }
 
     switch (c)
     {
     case '\'':
-        return ler_char();
+        return devolver_token(ler_char());
 
     case '"':
-        return ler_string();
+        return devolver_token(ler_string());
 
     case '@':
     {
@@ -584,7 +655,7 @@ TInfoAtomo lex_next(void)
 
         if (prox == '{')
         {
-            return pular_comentario_bloco();
+            return devolver_token(pular_comentario_bloco());
         }
 
         if (prox != EOF)
@@ -592,7 +663,7 @@ TInfoAtomo lex_next(void)
             ungetc(prox, fonte);
         }
 
-        return pular_comentario_linha();
+        return devolver_token(pular_comentario_linha());
     }
 
     case ';':
@@ -602,7 +673,7 @@ TInfoAtomo lex_next(void)
     case ']':
     case ',':
     case ':':
-        return ler_delimitador(c);
+        return devolver_token(ler_delimitador(c));
 
     case '+':
     case '-':
@@ -614,7 +685,7 @@ TInfoAtomo lex_next(void)
     case '>':
     case '<':
     case '.':
-        return ler_operador(c);
+        return devolver_token(ler_operador(c));
 
     default:
     {

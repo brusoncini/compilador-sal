@@ -1,4 +1,8 @@
-*.exe
-*.o
 salc
 arquivo.sal
+
+*.exe
+*.o
+*.tk
+*.ts
+*.trc

@@ -1,10 +1,3 @@
-/*
-Coordena a execução: processa parâmetros,
-abre arquivos, inicializa lex, parser, symtab e diag,
-aciona o processo de análise e, ao final,
-encerra todos os módulos de forma ordenada. Não realiza análise direta.
-*/
-
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -12,6 +5,7 @@ encerra todos os módulos de forma ordenada. Não realiza análise direta.
 #include "parser.h"
 #include "symtab.h"
 #include "opt.h"
+#include "log.h"
 
 int main(int argc, char *argv[])
 {
@@ -31,6 +25,15 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    if (opcoes.gerar_tokens)
+{
+    if (!log_tokens_init(opcoes.arquivo_fonte))
+    {
+        fclose(arquivo);
+        return 1;
+    }
+}
+
     if (!lex_init(arquivo))
     {
         fclose(arquivo);
@@ -46,6 +49,7 @@ int main(int argc, char *argv[])
     ts_print();
 
     ts_free();
+    log_tokens_close();
     fclose(arquivo);
 
     return 0;
