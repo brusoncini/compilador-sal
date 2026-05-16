@@ -1,2 +1,4 @@
-/arquivo.sal
 *.exe
+*.o
+salc
+arquivo.sal

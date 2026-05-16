@@ -1,22 +1,105 @@
-# SALc: um compilador para Linguagem SAL
-O projeto consiste na implementação completa, em C, de um compilador para a linguagem SAL – Simple Academic Language, conforme especificação oficial.
+# SALc - Compilador da Linguagem SAL
 
-Nesta primeira etapa, o foco é a **análise léxica e sintática**, bem como a construção da tabela de símbolos.
+<p align="center">
+  <img src="https://img.shields.io/badge/C-99-blue.svg">
+  <img src="https://img.shields.io/badge/GCC-Linux-green.svg">
+  <img src="https://img.shields.io/badge/status-em%20desenvolvimento-yellow">
+  <img src="https://img.shields.io/badge/tipo-projeto%20acadêmico-purple">
+</p>
 
-## Como compilar e executar o projeto
-- Abra o terminal e utilize o seguinte comando para compilar os arquivos C:
+Compilador desenvolvido em C para a linguagem **SAL (Simple Academic Language)**, criado para a disciplina de Compiladores.
 
-        gcc -Wall -Wextra -std=c99
+O projeto implementa:
 
-- Será criado um arquivo **salc.exe**.
-- Para executar, certifique-se de que o arquivo "arquivo.sal" esteja na **mesma pasta** que o arquivo sal.exe.
-- Rode o seguinte comando no terminal:
+- Análise Léxica
+- Análise Sintática (ASDR)
+- Tabela de Símbolos
+- Controle de Escopos
+- Geração de Logs
+- Interface CLI
 
-        .\salc
+# 📚 Sobre a Linguagem SAL
+
+A SAL é uma linguagem didática utilizada no estudo de compiladores.
+
+Ela possui:
+
+- Tipos primitivos (`int`, `bool`, `char`)
+- Estruturas condicionais (`if`, `match`)
+- Estruturas de repetição (`for`, `loop while`, `loop until`)
+- Funções e procedimentos
+- Variáveis globais e locais
+- Vetores
+- Expressões aritméticas e lógicas
+
+# 🛠️ Tecnologias
+
+- Linguagem C
+- GCC
+- Makefile
+- Linux / WSL
 
 
-## Grupo
-|NOME              | RA         |
-|------------------|------------|
-|Bruna Soncini     | 10428267   |
-|Felipe Nakandakari| 10395160   |
+# ⚙️ Compilação
+
+```bash
+make
+```
+
+O binário gerado será: `./salc`
+
+
+# ▶️ Execução
+
+Compilar um arquivo SAL:
+
+```bash
+./salc arquivo.sal
+```
+
+Gerar lista de tokens:
+
+```bash
+./salc arquivo.sal --tokens
+```
+
+Gerar tabela de símbolos:
+
+```bash
+./salc arquivo.sal --symtab
+```
+
+Gerar rastreamento da análise:
+
+```bash
+./salc arquivo.sal --trace
+```
+
+
+# 📄 Exemplo
+
+Um exemplo de programa em SAL, reconhecido pelo compilador:
+
+```sal
+module Exemplo;
+
+proc main()
+start
+    print("Olá mundo!");
+end
+```
+
+
+# 👥 Feito por
+
+|Nome               | RA         |
+|-------------------|------------|
+|Bruna Soncini      | 10428267   |
+|Felipe Nakandakari | 10395160   |
+
+Universidade Presbiteriana Mackenzie - Curso de Ciência da Computação
+
+
+# 🚧 Status
+
+Projeto em desenvolvimento!!!

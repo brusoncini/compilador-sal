@@ -4,13 +4,13 @@
 
 #include "lex.h"
 #include "parser.h"
+#include "symtab.h"
 
 static TInfoAtomo token_atual;
 
 // Comandos
 static void parse_print(void);
 static void parse_scan(void);
-static void parse_atribuicao(void);
 static void parse_if(void);
 static void parse_ret(void);
 static void parse_loop(void);
@@ -20,16 +20,22 @@ static void parse_when(void);
 static void parse_condicao_when(void);
 static void parse_item_when(void);
 static void parse_comando(void);
+static void parse_comando_identificador(void);
 static void parse_bloco(void);
 
 // Declaracoes
 static void parse_tipo(void);
-static void parse_identificador_declaracao(void);
+static const char *tipo_atual_para_texto(TAtomo atomo);
+static void parse_identificador_declaracao(char nome[], int *extra);
 static void parse_declaracao(void);
 static void parse_globals(void);
 static void parse_locals(void);
-static int eh_ou_logico(void);
-static void consumir_ou_logico(void);
+static void parse_parametro(void);
+static void parse_lista_parametros(int *quantidade_parametros);
+static void parse_proc_decl_resto(void);
+static void parse_funcao_decl(void);
+static void parse_indice_vetor(void);
+static void parse_chamada_resto(void);
 
 /*
  As expressoes sao analisadas na seguinte ordem:
@@ -50,6 +56,8 @@ static void parse_mult_div(void);
 static void parse_fator(void);
 
 static int eh_relacional(TAtomo atomo);
+static int eh_ou_logico(void);
+static void consumir_ou_logico(void);
 
 // Funcao apenas para debug: usa nomes mais claros
 static const char *nome_atomo(TAtomo atomo)
@@ -64,10 +72,14 @@ static const char *nome_atomo(TAtomo atomo)
         return "TK_MODULE";
     case TK_PROC:
         return "TK_PROC";
+    case TK_FN:
+        return "TK_FN";
     case TK_MAIN:
         return "TK_MAIN";
     case TK_GLOBALS:
         return "TK_GLOBALS";
+    case TK_LOCALS:
+        return "TK_LOCALS";
     case TK_START:
         return "TK_START";
     case TK_END:
@@ -126,6 +138,10 @@ static const char *nome_atomo(TAtomo atomo)
         return "ABRE_PAR";
     case FECHA_PAR:
         return "FECHA_PAR";
+    case ABRE_COL:
+        return "ABRE_COL";
+    case FECHA_COL:
+        return "FECHA_COL";
     case VIRGULA:
         return "VIRGULA";
     case PONTO_E_VIRGULA:
@@ -162,12 +178,6 @@ static const char *nome_atomo(TAtomo atomo)
         return "IMPLICA";
     case INTERVALO:
         return "INTERVALO";
-    case TK_LOCALS:
-        return "TK_LOCALS";
-    case ABRE_COL:
-        return "ABRE_COL";
-    case FECHA_COL:
-        return "FECHA_COL";
     default:
         return "TOKEN_DESCONHECIDO";
     }
@@ -208,7 +218,7 @@ static int eh_relacional(TAtomo atomo)
            atomo == MENOR_IGUAL;
 }
 
-// Diferencia v (OU lógico) de 'v' (caractere)
+// Diferencia v (OU lógico) de v como identificador
 static int eh_ou_logico(void)
 {
     return token_atual.atomo == OU_LOGICO ||
@@ -235,6 +245,18 @@ static void consumir_ou_logico(void)
     }
 }
 
+static const char *tipo_atual_para_texto(TAtomo atomo)
+{
+    if (atomo == TK_INT)
+        return "int";
+    if (atomo == TK_BOOL)
+        return "bool";
+    if (atomo == TK_CHAR)
+        return "char";
+
+    return "desconhecido";
+}
+
 // Declaracoes de tipo: int, bool, char
 static void parse_tipo(void)
 {
@@ -259,35 +281,57 @@ static void parse_tipo(void)
     }
 }
 
-// Declaracao simples: x, y, z: int;
-static void parse_declaracao(void)
+static void parse_identificador_declaracao(char nome[], int *extra)
 {
-    parse_identificador_declaracao();
-
-    while (token_atual.atomo == VIRGULA)
-    {
-        consumir(VIRGULA);
-        parse_identificador_declaracao();
-    }
-
-    consumir(DOIS_PONTOS);
-    parse_tipo();
-    consumir(PONTO_E_VIRGULA);
-}
-
-static void parse_identificador_declaracao(void)
-{
+    strcpy(nome, token_atual.texto);
     consumir(IDENTIFICADOR);
+
+    *extra = 0;
 
     if (token_atual.atomo == ABRE_COL)
     {
         consumir(ABRE_COL);
+        *extra = atoi(token_atual.texto);
         consumir(CONST_INT);
         consumir(FECHA_COL);
     }
 }
 
-// Secao globals opcional
+// Declaracao: x, y, z: int; ou v[10]: int;
+static void parse_declaracao(void)
+{
+    char nomes[50][100];
+    int extras[50];
+    int quantidade = 0;
+    const char *tipo_texto;
+    int i;
+
+    parse_identificador_declaracao(nomes[quantidade], &extras[quantidade]);
+    quantidade++;
+
+    while (token_atual.atomo == VIRGULA)
+    {
+        consumir(VIRGULA);
+        parse_identificador_declaracao(nomes[quantidade], &extras[quantidade]);
+        quantidade++;
+    }
+
+    consumir(DOIS_PONTOS);
+    tipo_texto = tipo_atual_para_texto(token_atual.atomo);
+    parse_tipo();
+    consumir(PONTO_E_VIRGULA);
+
+    for (i = 0; i < quantidade; i++)
+    {
+        if (!ts_insert(nomes[i], "variavel", tipo_texto, extras[i]))
+        {
+            printf("Erro semantico: identificador '%s' ja declarado no escopo %s\n",
+                   nomes[i], ts_current_scope());
+            exit(1);
+        }
+    }
+}
+
 static void parse_globals(void)
 {
     consumir(TK_GLOBALS);
@@ -308,6 +352,168 @@ static void parse_locals(void)
     }
 }
 
+static void parse_parametro(void)
+{
+    char nome[100];
+    const char *tipo_texto;
+
+    strcpy(nome, token_atual.texto);
+    consumir(IDENTIFICADOR);
+    consumir(DOIS_PONTOS);
+
+    tipo_texto = tipo_atual_para_texto(token_atual.atomo);
+    parse_tipo();
+
+    if (!ts_insert(nome, "parametro", tipo_texto, 0))
+    {
+        printf("Erro semantico: parametro '%s' ja declarado no escopo %s\n",
+               nome, ts_current_scope());
+        exit(1);
+    }
+}
+
+static void parse_lista_parametros(int *quantidade_parametros)
+{
+    *quantidade_parametros = 0;
+
+    if (token_atual.atomo == IDENTIFICADOR)
+    {
+        parse_parametro();
+        (*quantidade_parametros)++;
+
+        while (token_atual.atomo == VIRGULA)
+        {
+            consumir(VIRGULA);
+            parse_parametro();
+            (*quantidade_parametros)++;
+        }
+    }
+}
+
+static void parse_proc_decl_resto(void)
+{
+    char nome[100];
+    int quantidade_parametros = 0;
+
+    strcpy(nome, token_atual.texto);
+
+    if (!ts_insert(nome, "procedimento", "-", 0))
+    {
+        printf("Erro semantico: procedimento '%s' ja declarado no escopo %s\n",
+               nome, ts_current_scope());
+        exit(1);
+    }
+
+    consumir(IDENTIFICADOR);
+    consumir(ABRE_PAR);
+
+    ts_enter_scope(nome);
+    parse_lista_parametros(&quantidade_parametros);
+    consumir(FECHA_PAR);
+
+    if (token_atual.atomo == TK_LOCALS)
+    {
+        parse_locals();
+    }
+
+    parse_bloco();
+    ts_exit_scope();
+
+    // atualiza extra do procedimento com quantidade de parametros
+    {
+        Simbolo *s = ts_lookup(nome);
+        if (s != NULL)
+        {
+            s->extra = quantidade_parametros;
+        }
+    }
+}
+
+static void parse_funcao_decl(void)
+{
+    char nome[100];
+    const char *tipo_texto;
+    int quantidade_parametros = 0;
+
+    consumir(TK_FN);
+
+    strcpy(nome, token_atual.texto);
+    consumir(IDENTIFICADOR);
+
+    consumir(ABRE_PAR);
+    ts_enter_scope(nome);
+    parse_lista_parametros(&quantidade_parametros);
+    consumir(FECHA_PAR);
+    consumir(DOIS_PONTOS);
+
+    tipo_texto = tipo_atual_para_texto(token_atual.atomo);
+    parse_tipo();
+    ts_exit_scope();
+
+    if (!ts_insert(nome, "funcao", tipo_texto, quantidade_parametros))
+    {
+        printf("Erro semantico: funcao '%s' ja declarada no escopo %s\n",
+               nome, ts_current_scope());
+        exit(1);
+    }
+
+    ts_enter_scope(nome);
+
+    if (token_atual.atomo == TK_LOCALS)
+    {
+        parse_locals();
+    }
+
+    parse_bloco();
+    ts_exit_scope();
+}
+
+static void parse_indice_vetor(void)
+{
+    consumir(ABRE_COL);
+
+    if (token_atual.atomo == CONST_INT)
+    {
+        consumir(CONST_INT);
+    }
+    else if (token_atual.atomo == IDENTIFICADOR)
+    {
+        if (ts_lookup(token_atual.texto) == NULL)
+        {
+            printf("Erro semantico: identificador '%s' nao declarado\n", token_atual.texto);
+            exit(1);
+        }
+        consumir(IDENTIFICADOR);
+    }
+    else
+    {
+        printf("Erro de sintaxe na linha %d: indice de vetor invalido (%s)\n",
+               token_atual.linha,
+               token_atual.texto);
+        exit(1);
+    }
+
+    consumir(FECHA_COL);
+}
+
+static void parse_chamada_resto(void)
+{
+    consumir(ABRE_PAR);
+
+    if (token_atual.atomo != FECHA_PAR)
+    {
+        parse_expr();
+
+        while (token_atual.atomo == VIRGULA)
+        {
+            consumir(VIRGULA);
+            parse_expr();
+        }
+    }
+
+    consumir(FECHA_PAR);
+}
+
 // O fator é a menor unidade da expressão
 static void parse_fator(void)
 {
@@ -323,7 +529,22 @@ static void parse_fator(void)
     }
     else if (token_atual.atomo == IDENTIFICADOR)
     {
+        if (ts_lookup(token_atual.texto) == NULL)
+        {
+            printf("Erro semantico: identificador '%s' nao declarado\n", token_atual.texto);
+            exit(1);
+        }
+
         consumir(IDENTIFICADOR);
+
+        if (token_atual.atomo == ABRE_PAR)
+        {
+            parse_chamada_resto();
+        }
+        else if (token_atual.atomo == ABRE_COL)
+        {
+            parse_indice_vetor();
+        }
     }
     else if (token_atual.atomo == CONST_INT)
     {
@@ -416,7 +637,19 @@ static void parse_for(void)
 {
     consumir(TK_FOR);
 
+    if (ts_lookup(token_atual.texto) == NULL)
+    {
+        printf("Erro semantico: identificador '%s' nao declarado\n", token_atual.texto);
+        exit(1);
+    }
+
     consumir(IDENTIFICADOR);
+
+    if (token_atual.atomo == ABRE_COL)
+    {
+        parse_indice_vetor();
+    }
+
     consumir(ATRIBUICAO);
     parse_expr();
 
@@ -433,7 +666,7 @@ static void parse_for(void)
     parse_comando();
 }
 
-// Comandos para parse de match
+// Comandos do match
 static void parse_item_when(void)
 {
     if (token_atual.atomo == SUBTRACAO)
@@ -591,15 +824,47 @@ static void parse_scan(void)
 {
     consumir(TK_SCAN);
     consumir(ABRE_PAR);
+
+    if (ts_lookup(token_atual.texto) == NULL)
+    {
+        printf("Erro semantico: identificador '%s' nao declarado\n", token_atual.texto);
+        exit(1);
+    }
+
     consumir(IDENTIFICADOR);
+
+    if (token_atual.atomo == ABRE_COL)
+    {
+        parse_indice_vetor();
+    }
+
     consumir(FECHA_PAR);
 }
 
-static void parse_atribuicao(void)
+static void parse_comando_identificador(void)
 {
+    if (ts_lookup(token_atual.texto) == NULL)
+    {
+        printf("Erro semantico: identificador '%s' nao declarado\n", token_atual.texto);
+        exit(1);
+    }
+
     consumir(IDENTIFICADOR);
-    consumir(ATRIBUICAO);
-    parse_expr();
+
+    if (token_atual.atomo == ABRE_PAR)
+    {
+        parse_chamada_resto();
+    }
+    else
+    {
+        if (token_atual.atomo == ABRE_COL)
+        {
+            parse_indice_vetor();
+        }
+
+        consumir(ATRIBUICAO);
+        parse_expr();
+    }
 }
 
 static void parse_comando(void)
@@ -638,7 +903,7 @@ static void parse_comando(void)
     }
     else if (token_atual.atomo == IDENTIFICADOR)
     {
-        parse_atribuicao();
+        parse_comando_identificador();
     }
     else
     {
@@ -678,17 +943,45 @@ void parse_program(void)
         parse_globals();
     }
 
-    consumir(TK_PROC);
-    consumir(TK_MAIN);
-    consumir(ABRE_PAR);
-    consumir(FECHA_PAR);
-
-    if (token_atual.atomo == TK_LOCALS)
+    while (token_atual.atomo == TK_FN || token_atual.atomo == TK_PROC)
     {
-        parse_locals();
+        if (token_atual.atomo == TK_FN)
+        {
+            parse_funcao_decl();
+        }
+        else
+        {
+            consumir(TK_PROC);
+
+            if (token_atual.atomo == TK_MAIN)
+            {
+                consumir(TK_MAIN);
+                consumir(ABRE_PAR);
+                consumir(FECHA_PAR);
+
+                ts_enter_scope("main");
+
+                if (token_atual.atomo == TK_LOCALS)
+                {
+                    parse_locals();
+                }
+
+                parse_bloco();
+                ts_exit_scope();
+
+                consumir(FIM_ARQUIVO);
+                return;
+            }
+            else
+            {
+                parse_proc_decl_resto();
+            }
+        }
     }
 
-    parse_bloco();
-
-    consumir(FIM_ARQUIVO);
+    printf("Erro de sintaxe na linha %d: esperado proc main, encontrado %s (%s)\n",
+           token_atual.linha,
+           nome_atomo(token_atual.atomo),
+           token_atual.texto);
+    exit(1);
 }
