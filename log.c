@@ -4,6 +4,7 @@
 #include "log.h"
 
 static FILE *arquivo_tokens = NULL;
+static FILE *arquivo_symtab = NULL;
 
 static void montar_nome_tk(const char *arquivo_fonte, char *saida, int tamanho)
 {
@@ -36,6 +37,27 @@ static void montar_nome_tk(const char *arquivo_fonte, char *saida, int tamanho)
     }
 
     strcat(saida, ".tk");
+}
+
+static void trocar_extensao(char *nome, const char *extensao)
+{
+    int i;
+    int ultimo_ponto = -1;
+
+    for (i = 0; nome[i] != '\0'; i++)
+    {
+        if (nome[i] == '.')
+        {
+            ultimo_ponto = i;
+        }
+    }
+
+    if (ultimo_ponto != -1)
+    {
+        nome[ultimo_ponto] = '\0';
+    }
+
+    strcat(nome, extensao);
 }
 
 int log_tokens_init(const char *arquivo_fonte)
@@ -77,5 +99,57 @@ void log_tokens_close(void)
     {
         fclose(arquivo_tokens);
         arquivo_tokens = NULL;
+    }
+}
+
+int log_symtab_init(const char *arquivo_fonte)
+{
+    char nome_saida[300];
+
+    strcpy(nome_saida, arquivo_fonte);
+
+    trocar_extensao(nome_saida, ".ts");
+
+    arquivo_symtab = fopen(nome_saida, "w");
+
+    if (arquivo_symtab == NULL)
+    {
+        printf("Nao foi possivel criar o arquivo de tabela de simbolos.\n");
+        return 0;
+    }
+
+    return 1;
+}
+
+void log_symtab_line(
+    const char *escopo,
+    const char *lexema,
+    const char *categoria,
+    const char *tipo,
+    int extra
+)
+{
+    if (arquivo_symtab == NULL)
+    {
+        return;
+    }
+
+    fprintf(
+        arquivo_symtab,
+        "SCOPE=%s  id=\"%s\"  cat=%s  tipo=%s  extra=%d\n",
+        escopo,
+        lexema,
+        categoria,
+        tipo,
+        extra
+    );
+}
+
+void log_symtab_close(void)
+{
+    if (arquivo_symtab != NULL)
+    {
+        fclose(arquivo_symtab);
+        arquivo_symtab = NULL;
     }
 }

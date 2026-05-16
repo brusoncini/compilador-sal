@@ -9,6 +9,7 @@
 #include <string.h>
 
 #include "symtab.h"
+#include "log.h"
 
 typedef struct Escopo
 {
@@ -202,6 +203,13 @@ void ts_print(void)
                atual->categoria,
                atual->tipo,
                atual->extra);
+
+        log_symtab_line(
+            atual->escopo,
+            atual->lexema,
+            atual->categoria,
+            atual->tipo,
+            atual->extra);
 
         atual = atual->prox;
     }

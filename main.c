@@ -26,14 +26,23 @@ int main(int argc, char *argv[])
     }
 
     if (opcoes.gerar_tokens)
-{
-    if (!log_tokens_init(opcoes.arquivo_fonte))
     {
-        fclose(arquivo);
-        return 1;
+        if (!log_tokens_init(opcoes.arquivo_fonte))
+        {
+            fclose(arquivo);
+            return 1;
+        }
     }
-}
 
+    if (opcoes.gerar_symtab)
+    {
+        if (!log_symtab_init(opcoes.arquivo_fonte))
+        {
+            log_tokens_close();
+            fclose(arquivo);
+            return 1;
+        }
+    }
     if (!lex_init(arquivo))
     {
         fclose(arquivo);
@@ -50,6 +59,7 @@ int main(int argc, char *argv[])
 
     ts_free();
     log_tokens_close();
+    log_symtab_close();
     fclose(arquivo);
 
     return 0;
