@@ -5,6 +5,7 @@
 
 static FILE *arquivo_tokens = NULL;
 static FILE *arquivo_symtab = NULL;
+static FILE *arquivo_trace = NULL;
 
 static void montar_nome_tk(const char *arquivo_fonte, char *saida, int tamanho)
 {
@@ -151,5 +152,42 @@ void log_symtab_close(void)
     {
         fclose(arquivo_symtab);
         arquivo_symtab = NULL;
+    }
+}
+
+int log_trace_init(const char *arquivo_fonte)
+{
+    char nome_saida[300];
+
+    strcpy(nome_saida, arquivo_fonte);
+    trocar_extensao(nome_saida, ".trc");
+
+    arquivo_trace = fopen(nome_saida, "w");
+
+    if (arquivo_trace == NULL)
+    {
+        printf("Nao foi possivel criar o arquivo de trace.\n");
+        return 0;
+    }
+
+    return 1;
+}
+
+void log_trace_line(const char *mensagem)
+{
+    if (arquivo_trace == NULL)
+    {
+        return;
+    }
+
+    fprintf(arquivo_trace, "%s\n", mensagem);
+}
+
+void log_trace_close(void)
+{
+    if (arquivo_trace != NULL)
+    {
+        fclose(arquivo_trace);
+        arquivo_trace = NULL;
     }
 }

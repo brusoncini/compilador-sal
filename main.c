@@ -43,6 +43,18 @@ int main(int argc, char *argv[])
             return 1;
         }
     }
+
+    if (opcoes.gerar_trace)
+    {
+        if (!log_trace_init(opcoes.arquivo_fonte))
+        {
+            log_tokens_close();
+            log_symtab_close();
+            fclose(arquivo);
+            return 1;
+        }
+    }
+
     if (!lex_init(arquivo))
     {
         fclose(arquivo);
@@ -60,6 +72,7 @@ int main(int argc, char *argv[])
     ts_free();
     log_tokens_close();
     log_symtab_close();
+    log_trace_close();
     fclose(arquivo);
 
     return 0;

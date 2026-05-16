@@ -5,6 +5,7 @@
 #include "lex.h"
 #include "parser.h"
 #include "symtab.h"
+#include "log.h"
 
 static TInfoAtomo token_atual;
 
@@ -869,6 +870,8 @@ static void parse_comando_identificador(void)
 
 static void parse_comando(void)
 {
+    log_trace_line("ENTER parse_comando");
+
     if (token_atual.atomo == TK_PRINT)
     {
         parse_print();
@@ -916,6 +919,8 @@ static void parse_comando(void)
 
 static void parse_bloco(void)
 {
+    log_trace_line("ENTER parse_bloco");
+
     consumir(TK_START);
 
     while (token_atual.atomo != TK_END)
@@ -925,15 +930,19 @@ static void parse_bloco(void)
     }
 
     consumir(TK_END);
+    log_trace_line("EXIT parse_bloco");
 }
 
 void parser_init(void)
 {
+    log_trace_line("parser_init");
     avancar();
 }
 
 void parse_program(void)
 {
+    log_trace_line("ENTER parse_program");
+
     consumir(TK_MODULE);
     consumir(IDENTIFICADOR);
     consumir(PONTO_E_VIRGULA);
@@ -977,6 +986,8 @@ void parse_program(void)
                 parse_proc_decl_resto();
             }
         }
+
+        log_trace_line("EXIT parse_program");
     }
 
     printf("Erro de sintaxe na linha %d: esperado proc main, encontrado %s (%s)\n",
