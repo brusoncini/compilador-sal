@@ -18,7 +18,7 @@ O projeto implementa:
 - Geração de Logs
 - Interface CLI
 
-# 📚 Sobre a Linguagem SAL
+## 📚 Sobre a Linguagem SAL
 
 A SAL é uma linguagem didática utilizada no estudo de compiladores.
 
@@ -32,7 +32,7 @@ Ela possui:
 - Vetores
 - Expressões aritméticas e lógicas
 
-# 🛠️ Tecnologias
+## 🛠️ Tecnologias
 
 - Linguagem C
 - GCC
@@ -40,7 +40,7 @@ Ela possui:
 - Linux / WSL
 
 
-# ⚙️ Compilação
+## ⚙️ Compilação
 
 ```bash
 make
@@ -49,7 +49,7 @@ make
 O binário gerado será: `./salc`
 
 
-# ▶️ Execução
+## ▶️ Execução
 
 Compilar um arquivo SAL:
 
@@ -76,7 +76,7 @@ Gerar rastreamento da análise:
 ```
 
 
-# 📄 Exemplo
+## 📄 Exemplo
 
 Um exemplo de programa em SAL, reconhecido pelo compilador:
 
@@ -90,7 +90,7 @@ end
 ```
 
 
-# 👥 Feito por
+## 👥 Feito por
 
 |Nome               | RA         |
 |-------------------|------------|
@@ -100,6 +100,6 @@ end
 Universidade Presbiteriana Mackenzie - Curso de Ciência da Computação
 
 
-# 🚧 Status
+## 🚧 Status
 
 Projeto em desenvolvimento!!!

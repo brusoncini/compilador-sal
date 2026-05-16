@@ -11,16 +11,23 @@ encerra todos os módulos de forma ordenada. Não realiza análise direta.
 #include "lex.h"
 #include "parser.h"
 #include "symtab.h"
+#include "opt.h"
 
-int main(void)
+int main(int argc, char *argv[])
 {
     FILE *arquivo;
+    Opcoes opcoes;
 
-    arquivo = fopen("arquivo.sal", "r");
+    if (!opts_parse(argc, argv, &opcoes))
+    {
+        return 1;
+    }
+
+    arquivo = fopen(opcoes.arquivo_fonte, "r");
 
     if (arquivo == NULL)
     {
-        printf("Nao foi possivel abrir o arquivo.\n");
+        printf("Nao foi possivel abrir o arquivo: %s\n", opcoes.arquivo_fonte);
         return 1;
     }
 
@@ -40,5 +47,6 @@ int main(void)
 
     ts_free();
     fclose(arquivo);
+
     return 0;
 }
