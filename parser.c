@@ -863,7 +863,7 @@ static void parse_comando_identificador(void)
 
 static void parse_comando(void)
 {
-    log_trace_line("ENTER parse_comando");
+    log_trace_enter("parse_comando");
 
     if (token_atual.atomo == TK_PRINT)
     {
@@ -908,11 +908,13 @@ static void parse_comando(void)
                token_atual.texto);
         exit(1);
     }
+
+    log_trace_exit("parse_comando");
 }
 
 static void parse_bloco(void)
 {
-    log_trace_line("ENTER parse_bloco");
+    log_trace_enter("parse_bloco");
 
     consumir(TK_START);
 
@@ -923,7 +925,7 @@ static void parse_bloco(void)
     }
 
     consumir(TK_END);
-    log_trace_line("EXIT parse_bloco");
+    log_trace_exit("parse_bloco");
 }
 
 void parser_init(void)
@@ -934,7 +936,7 @@ void parser_init(void)
 
 void parse_program(void)
 {
-    log_trace_line("ENTER parse_program");
+    log_trace_enter("parse_program");
 
     consumir(TK_MODULE);
     consumir(IDENTIFICADOR);
@@ -972,6 +974,7 @@ void parse_program(void)
                 ts_exit_scope();
 
                 consumir(FIM_ARQUIVO);
+                log_trace_exit("parse_program");
                 return;
             }
             else
@@ -979,9 +982,9 @@ void parse_program(void)
                 parse_proc_decl_resto();
             }
         }
-
-        log_trace_line("EXIT parse_program");
     }
+
+    log_trace_exit("parse_program");
 
     printf("Erro de sintaxe na linha %d: esperado proc main, encontrado %s (%s)\n",
            token_atual.linha,

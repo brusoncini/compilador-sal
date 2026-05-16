@@ -19,5 +19,7 @@ void log_symtab_close(void);
 int log_trace_init(const char *arquivo_fonte);
 void log_trace_line(const char *mensagem);
 void log_trace_close(void);
+void log_trace_enter(const char *funcao);
+void log_trace_exit(const char *funcao);
 
 #endif

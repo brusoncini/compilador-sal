@@ -7,6 +7,8 @@ static FILE *arquivo_tokens = NULL;
 static FILE *arquivo_symtab = NULL;
 static FILE *arquivo_trace = NULL;
 
+static int trace_indentacao = 0;
+
 static void montar_nome_tk(const char *arquivo_fonte, char *saida, int tamanho)
 {
     int i = 0;
@@ -90,8 +92,7 @@ void log_token(TInfoAtomo token)
         "%d  %s  \"%s\"\n",
         token.linha,
         lex_nome_atomo(token.atomo),
-        token.texto
-    );
+        token.texto);
 }
 
 void log_tokens_close(void)
@@ -127,8 +128,7 @@ void log_symtab_line(
     const char *lexema,
     const char *categoria,
     const char *tipo,
-    int extra
-)
+    int extra)
 {
     if (arquivo_symtab == NULL)
     {
@@ -142,8 +142,7 @@ void log_symtab_line(
         lexema,
         categoria,
         tipo,
-        extra
-    );
+        extra);
 }
 
 void log_symtab_close(void)
@@ -152,6 +151,16 @@ void log_symtab_close(void)
     {
         fclose(arquivo_symtab);
         arquivo_symtab = NULL;
+    }
+}
+
+static void escrever_indentacao(void)
+{
+    int i;
+
+    for (i = 0; i < trace_indentacao; i++)
+    {
+        fprintf(arquivo_trace, "  ");
     }
 }
 
@@ -190,4 +199,35 @@ void log_trace_close(void)
         fclose(arquivo_trace);
         arquivo_trace = NULL;
     }
+}
+
+void log_trace_enter(const char *funcao)
+{
+    if (arquivo_trace == NULL)
+    {
+        return;
+    }
+
+    escrever_indentacao();
+
+    fprintf(arquivo_trace, "ENTER %s\n", funcao);
+
+    trace_indentacao++;
+}
+
+void log_trace_exit(const char *funcao)
+{
+    if (arquivo_trace == NULL)
+    {
+        return;
+    }
+
+    if (trace_indentacao > 0)
+    {
+        trace_indentacao--;
+    }
+
+    escrever_indentacao();
+
+    fprintf(arquivo_trace, "EXIT %s\n", funcao);
 }
