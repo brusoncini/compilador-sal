@@ -6,6 +6,7 @@
 #include "parser.h"
 #include "symtab.h"
 #include "log.h"
+#include "diag.h"
 
 static TInfoAtomo token_atual;
 
@@ -37,16 +38,6 @@ static void parse_proc_decl_resto(void);
 static void parse_funcao_decl(void);
 static void parse_indice_vetor(void);
 static void parse_chamada_resto(void);
-
-/*
- As expressoes sao analisadas na seguinte ordem:
-    - parse_expr: v
-    - parse_and: ^
-    - parse_relacional: > < >= <= = <>
-    - parse_soma_sub: + -
-    - parse_mult_div: * /
-    - parse_fator: id, constantes, parenteses e unarios
-*/
 
 // Expressoes
 static void parse_expr(void);
@@ -184,31 +175,33 @@ static const char *nome_atomo(TAtomo atomo)
     }
 }
 
-static void erro_sintatico(TAtomo esperado)
-{
-    printf("Erro sintatico na linha %d: esperado %s, encontrado %s (%s)\n",
-           token_atual.linha,
-           nome_atomo(esperado),
-           nome_atomo(token_atual.atomo),
-           token_atual.texto);
-    exit(1);
-}
-
 static void avancar(void)
 {
     token_atual = lex_next();
 }
 
+static const char *nome_token(TAtomo token)
+{
+    return lex_nome_atomo(token);
+}
+
 static void consumir(TAtomo esperado)
 {
+    char mensagem[200];
+
     if (token_atual.atomo != esperado)
     {
-        erro_sintatico(esperado);
+        sprintf(
+            mensagem,
+            "Esperado %s mas encontrado %s",
+            nome_token(esperado),
+            nome_token(token_atual.atomo));
+
+        diag_error_linha(token_atual.linha, mensagem);
     }
 
     avancar();
 }
-
 static int eh_relacional(TAtomo atomo)
 {
     return atomo == IGUAL ||
