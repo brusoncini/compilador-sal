@@ -51,7 +51,7 @@ static int eh_relacional(TAtomo atomo);
 static int eh_ou_logico(void);
 static void consumir_ou_logico(void);
 
-// Funcao apenas para debug: usa nomes mais claros
+// Converte um token para texto legivel
 static const char *nome_atomo(TAtomo atomo)
 {
     switch (atomo)
@@ -319,9 +319,16 @@ static void parse_declaracao(void)
     {
         if (!ts_insert(nomes[i], "variavel", tipo_texto, extras[i]))
         {
-            printf("Erro semantico: identificador '%s' ja declarado no escopo %s\n",
-                   nomes[i], ts_current_scope());
-            exit(1);
+            char mensagem[200];
+
+            sprintf(
+                mensagem,
+                "Identificador '%s' ja declarado no escopo %s",
+                nomes[i],
+                ts_current_scope()
+            );
+
+            diag_error_linha(token_atual.linha, mensagem);
         }
     }
 }
@@ -360,9 +367,16 @@ static void parse_parametro(void)
 
     if (!ts_insert(nome, "parametro", tipo_texto, 0))
     {
-        printf("Erro semantico: parametro '%s' ja declarado no escopo %s\n",
-               nome, ts_current_scope());
-        exit(1);
+        char mensagem[200];
+
+        sprintf(
+            mensagem,
+            "Parametro '%s' ja declarado no escopo %s",
+            nome,
+            ts_current_scope()
+        );
+
+        diag_error_linha(token_atual.linha, mensagem);
     }
 }
 
@@ -393,9 +407,16 @@ static void parse_proc_decl_resto(void)
 
     if (!ts_insert(nome, "procedimento", "-", 0))
     {
-        printf("Erro semantico: procedimento '%s' ja declarado no escopo %s\n",
-               nome, ts_current_scope());
-        exit(1);
+        char mensagem[200];
+
+        sprintf(
+            mensagem,
+            "Procedimento '%s' ja declarado no escopo %s",
+            nome,
+            ts_current_scope()
+        );
+
+        diag_error_linha(token_atual.linha, mensagem);
     }
 
     consumir(IDENTIFICADOR);
@@ -446,9 +467,16 @@ static void parse_funcao_decl(void)
 
     if (!ts_insert(nome, "funcao", tipo_texto, quantidade_parametros))
     {
-        printf("Erro semantico: funcao '%s' ja declarada no escopo %s\n",
-               nome, ts_current_scope());
-        exit(1);
+        char mensagem[200];
+
+        sprintf(
+            mensagem,
+            "Funcao '%s' ja declarada no escopo %s",
+            nome,
+            ts_current_scope()
+        );
+
+        diag_error_linha(token_atual.linha, mensagem);
     }
 
     ts_enter_scope(nome);
