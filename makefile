@@ -1,18 +1,33 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -std=c99
+OBJS = main.o lex.o parser.o symtab.o diag.o opt.o log.o
+EXEC = salc
 
-TARGET = salc
+all: $(EXEC)
 
-SOURCES = main.c lex.c parser.c symtab.c diag.c opt.c log.c
-OBJECTS = $(SOURCES:.c=.o)
+$(EXEC): $(OBJS)
+	$(CC) $(CFLAGS) -o $(EXEC) $(OBJS)
 
-all: $(TARGET)
+main.o: main.c lex.h parser.h symtab.h diag.h opt.h log.h
+	$(CC) $(CFLAGS) -c main.c
 
-$(TARGET): $(OBJECTS)
-	$(CC) $(CFLAGS) -o $(TARGET) $(OBJECTS)
+lex.o: lex.c lex.h diag.h log.h
+	$(CC) $(CFLAGS) -c lex.c
 
-%.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
+parser.o: parser.c parser.h lex.h symtab.h diag.h
+	$(CC) $(CFLAGS) -c parser.c
+
+symtab.o: symtab.c symtab.h
+	$(CC) $(CFLAGS) -c symtab.c
+
+diag.o: diag.c diag.h
+	$(CC) $(CFLAGS) -c diag.c
+
+opt.o: opt.c opt.h
+	$(CC) $(CFLAGS) -c opt.c
+
+log.o: log.c log.h lex.h symtab.h
+	$(CC) $(CFLAGS) -c log.c
 
 clean:
-	rm -f $(OBJECTS) $(TARGET) salc.exe
+	rm -f *.o $(EXEC) *.tk *.ts *.trc

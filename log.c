@@ -2,232 +2,78 @@
 #include <string.h>
 
 #include "log.h"
+#include "symtab.h"
 
 static FILE *arquivo_tokens = NULL;
-static FILE *arquivo_symtab = NULL;
-static FILE *arquivo_trace = NULL;
 
-static int trace_indentacao = 0;
-
-static void montar_nome_tk(const char *arquivo_fonte, char *saida, int tamanho)
-{
-    int i = 0;
-    int ultima_barrinha = -1;
-    int ultimo_ponto = -1;
-
-    while (arquivo_fonte[i] != '\0' && i < tamanho - 4)
-    {
-        saida[i] = arquivo_fonte[i];
-
-        if (arquivo_fonte[i] == '/' || arquivo_fonte[i] == '\\')
-        {
-            ultima_barrinha = i;
-        }
-
-        if (arquivo_fonte[i] == '.')
-        {
-            ultimo_ponto = i;
-        }
-
-        i++;
-    }
-
-    saida[i] = '\0';
-
-    if (ultimo_ponto > ultima_barrinha)
-    {
-        saida[ultimo_ponto] = '\0';
-    }
-
-    strcat(saida, ".tk");
-}
-
-static void trocar_extensao(char *nome, const char *extensao)
+void log_base_from_source(const char *arquivo_fonte, char *base, int tamanho)
 {
     int i;
     int ultimo_ponto = -1;
 
-    for (i = 0; nome[i] != '\0'; i++)
+    strncpy(base, arquivo_fonte, tamanho - 1);
+    base[tamanho - 1] = '\0';
+
+    for (i = 0; base[i] != '\0'; i++)
     {
-        if (nome[i] == '.')
+        if (base[i] == '.')
         {
             ultimo_ponto = i;
         }
     }
 
-    if (ultimo_ponto != -1)
+    if (ultimo_ponto >= 0)
     {
-        nome[ultimo_ponto] = '\0';
+        base[ultimo_ponto] = '\0';
     }
-
-    strcat(nome, extensao);
 }
 
-int log_tokens_init(const char *arquivo_fonte)
+void log_tokens_from_source(const char *arquivo_fonte)
 {
-    char nome_saida[300];
+    char base[512];
+    char caminho[520];
 
-    montar_nome_tk(arquivo_fonte, nome_saida, sizeof(nome_saida));
-
-    arquivo_tokens = fopen(nome_saida, "w");
-
-    if (arquivo_tokens == NULL)
-    {
-        printf("Nao foi possivel criar o arquivo de tokens.\n");
-        return 0;
-    }
-
-    return 1;
+    log_base_from_source(arquivo_fonte, base, sizeof(base));
+    snprintf(caminho, sizeof(caminho), "%s.tk", base);
+    arquivo_tokens = fopen(caminho, "w");
 }
 
-void log_token(TInfoAtomo token)
+void log_symtab_from_source(const char *arquivo_fonte)
 {
-    if (arquivo_tokens == NULL)
+    char base[512];
+    char caminho[520];
+
+    log_base_from_source(arquivo_fonte, base, sizeof(base));
+    snprintf(caminho, sizeof(caminho), "%s.ts", base);
+    ts_dump_to_file(caminho);
+}
+
+void log_trace_from_source(const char *arquivo_fonte, char *caminho, int tamanho)
+{
+    char base[512];
+
+    log_base_from_source(arquivo_fonte, base, sizeof(base));
+    snprintf(caminho, tamanho, "%s.trc", base);
+}
+
+void log_token_write(const TInfoAtomo *token)
+{
+    if (arquivo_tokens == NULL || token == NULL)
     {
         return;
     }
 
-    fprintf(
-        arquivo_tokens,
-        "%d  %s  \"%s\"\n",
-        token.linha,
-        lex_nome_atomo(token.atomo),
-        token.texto);
+    fprintf(arquivo_tokens, "%d  %s  \"%s\"\n",
+            token->linha,
+            lex_token_name(token->atomo),
+            token->texto);
 }
 
-void log_tokens_close(void)
+void log_token_close(void)
 {
     if (arquivo_tokens != NULL)
     {
         fclose(arquivo_tokens);
         arquivo_tokens = NULL;
     }
-}
-
-int log_symtab_init(const char *arquivo_fonte)
-{
-    char nome_saida[300];
-
-    strcpy(nome_saida, arquivo_fonte);
-
-    trocar_extensao(nome_saida, ".ts");
-
-    arquivo_symtab = fopen(nome_saida, "w");
-
-    if (arquivo_symtab == NULL)
-    {
-        printf("Nao foi possivel criar o arquivo de tabela de simbolos.\n");
-        return 0;
-    }
-
-    return 1;
-}
-
-void log_symtab_line(
-    const char *escopo,
-    const char *lexema,
-    const char *categoria,
-    const char *tipo,
-    int extra)
-{
-    if (arquivo_symtab == NULL)
-    {
-        return;
-    }
-
-    fprintf(
-        arquivo_symtab,
-        "SCOPE=%s  id=\"%s\"  cat=%s  tipo=%s  extra=%d\n",
-        escopo,
-        lexema,
-        categoria,
-        tipo,
-        extra);
-}
-
-void log_symtab_close(void)
-{
-    if (arquivo_symtab != NULL)
-    {
-        fclose(arquivo_symtab);
-        arquivo_symtab = NULL;
-    }
-}
-
-static void escrever_indentacao(void)
-{
-    int i;
-
-    for (i = 0; i < trace_indentacao; i++)
-    {
-        fprintf(arquivo_trace, "  ");
-    }
-}
-
-int log_trace_init(const char *arquivo_fonte)
-{
-    char nome_saida[300];
-
-    strcpy(nome_saida, arquivo_fonte);
-    trocar_extensao(nome_saida, ".trc");
-
-    arquivo_trace = fopen(nome_saida, "w");
-
-    if (arquivo_trace == NULL)
-    {
-        printf("Nao foi possivel criar o arquivo de trace.\n");
-        return 0;
-    }
-
-    return 1;
-}
-
-void log_trace_line(const char *mensagem)
-{
-    if (arquivo_trace == NULL)
-    {
-        return;
-    }
-
-    fprintf(arquivo_trace, "%s\n", mensagem);
-}
-
-void log_trace_close(void)
-{
-    if (arquivo_trace != NULL)
-    {
-        fclose(arquivo_trace);
-        arquivo_trace = NULL;
-    }
-}
-
-void log_trace_enter(const char *funcao)
-{
-    if (arquivo_trace == NULL)
-    {
-        return;
-    }
-
-    escrever_indentacao();
-
-    fprintf(arquivo_trace, "ENTER %s\n", funcao);
-
-    trace_indentacao++;
-}
-
-void log_trace_exit(const char *funcao)
-{
-    if (arquivo_trace == NULL)
-    {
-        return;
-    }
-
-    if (trace_indentacao > 0)
-    {
-        trace_indentacao--;
-    }
-
-    escrever_indentacao();
-
-    fprintf(arquivo_trace, "EXIT %s\n", funcao);
 }

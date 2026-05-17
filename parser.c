@@ -2,15 +2,20 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "diag.h"
 #include "lex.h"
 #include "parser.h"
 #include "symtab.h"
-#include "log.h"
-#include "diag.h"
 
 static TInfoAtomo token_atual;
 
-// Comandos
+static void erro_sintatico(const char *esperado);
+static void avancar(void);
+static void consumir(TAtomo esperado);
+
+static void parse_program_interno(void);
+static void parse_bloco(void);
+static void parse_comando(void);
 static void parse_print(void);
 static void parse_scan(void);
 static void parse_if(void);
@@ -21,11 +26,7 @@ static void parse_match(void);
 static void parse_when(void);
 static void parse_condicao_when(void);
 static void parse_item_when(void);
-static void parse_comando(void);
 static void parse_comando_identificador(void);
-static void parse_bloco(void);
-
-// Declaracoes
 static void parse_tipo(void);
 static const char *tipo_atual_para_texto(TAtomo atomo);
 static void parse_identificador_declaracao(char nome[], int *extra);
@@ -38,181 +39,14 @@ static void parse_proc_decl_resto(void);
 static void parse_funcao_decl(void);
 static void parse_indice_vetor(void);
 static void parse_chamada_resto(void);
-
-// Expressoes
 static void parse_expr(void);
 static void parse_and(void);
 static void parse_relacional(void);
 static void parse_soma_sub(void);
 static void parse_mult_div(void);
 static void parse_fator(void);
-
 static int eh_relacional(TAtomo atomo);
-static int eh_ou_logico(void);
-static void consumir_ou_logico(void);
 
-// Converte um token para texto legivel
-static const char *nome_atomo(TAtomo atomo)
-{
-    switch (atomo)
-    {
-    case FIM_ARQUIVO:
-        return "FIM_ARQUIVO";
-    case ERRO:
-        return "ERRO";
-    case TK_MODULE:
-        return "TK_MODULE";
-    case TK_PROC:
-        return "TK_PROC";
-    case TK_FN:
-        return "TK_FN";
-    case TK_MAIN:
-        return "TK_MAIN";
-    case TK_GLOBALS:
-        return "TK_GLOBALS";
-    case TK_LOCALS:
-        return "TK_LOCALS";
-    case TK_START:
-        return "TK_START";
-    case TK_END:
-        return "TK_END";
-    case TK_PRINT:
-        return "TK_PRINT";
-    case TK_SCAN:
-        return "TK_SCAN";
-    case TK_TRUE:
-        return "TK_TRUE";
-    case TK_FALSE:
-        return "TK_FALSE";
-    case TK_INT:
-        return "TK_INT";
-    case TK_BOOL:
-        return "TK_BOOL";
-    case TK_CHAR:
-        return "TK_CHAR";
-    case IDENTIFICADOR:
-        return "IDENTIFICADOR";
-    case CONST_INT:
-        return "CONST_INT";
-    case CONST_CHAR:
-        return "CONST_CHAR";
-    case STRING:
-        return "STRING";
-    case ATRIBUICAO:
-        return "ATRIBUICAO";
-    case SOMA:
-        return "SOMA";
-    case SUBTRACAO:
-        return "SUBTRACAO";
-    case MULTIPLICACAO:
-        return "MULTIPLICACAO";
-    case DIVISAO:
-        return "DIVISAO";
-    case IGUAL:
-        return "IGUAL";
-    case DIFERENTE:
-        return "DIFERENTE";
-    case MAIOR:
-        return "MAIOR";
-    case MENOR:
-        return "MENOR";
-    case MAIOR_IGUAL:
-        return "MAIOR_IGUAL";
-    case MENOR_IGUAL:
-        return "MENOR_IGUAL";
-    case E_LOGICO:
-        return "E_LOGICO";
-    case OU_LOGICO:
-        return "OU_LOGICO";
-    case NEGACAO:
-        return "NEGACAO";
-    case ABRE_PAR:
-        return "ABRE_PAR";
-    case FECHA_PAR:
-        return "FECHA_PAR";
-    case ABRE_COL:
-        return "ABRE_COL";
-    case FECHA_COL:
-        return "FECHA_COL";
-    case VIRGULA:
-        return "VIRGULA";
-    case PONTO_E_VIRGULA:
-        return "PONTO_E_VIRGULA";
-    case DOIS_PONTOS:
-        return "DOIS_PONTOS";
-    case TK_IF:
-        return "TK_IF";
-    case TK_ELSE:
-        return "TK_ELSE";
-    case TK_RET:
-        return "TK_RET";
-    case TK_LOOP:
-        return "TK_LOOP";
-    case TK_WHILE:
-        return "TK_WHILE";
-    case TK_UNTIL:
-        return "TK_UNTIL";
-    case TK_FOR:
-        return "TK_FOR";
-    case TK_TO:
-        return "TK_TO";
-    case TK_STEP:
-        return "TK_STEP";
-    case TK_DO:
-        return "TK_DO";
-    case TK_MATCH:
-        return "TK_MATCH";
-    case TK_WHEN:
-        return "TK_WHEN";
-    case TK_OTHERWISE:
-        return "TK_OTHERWISE";
-    case IMPLICA:
-        return "IMPLICA";
-    case INTERVALO:
-        return "INTERVALO";
-    default:
-        return "TOKEN_DESCONHECIDO";
-    }
-}
-
-static void avancar(void)
-{
-    token_atual = lex_next();
-}
-
-static const char *nome_token(TAtomo token)
-{
-    return lex_nome_atomo(token);
-}
-
-static void consumir(TAtomo esperado)
-{
-    char mensagem[200];
-
-    if (token_atual.atomo != esperado)
-    {
-        sprintf(
-            mensagem,
-            "Esperado %s mas encontrado %s",
-            nome_token(esperado),
-            nome_token(token_atual.atomo));
-
-        diag_error_linha(token_atual.linha, mensagem);
-    }
-
-    avancar();
-}
-static int eh_relacional(TAtomo atomo)
-{
-    return atomo == IGUAL ||
-           atomo == DIFERENTE ||
-           atomo == MAIOR ||
-           atomo == MENOR ||
-           atomo == MAIOR_IGUAL ||
-           atomo == MENOR_IGUAL;
-}
-
-// Diferencia v (OU lógico) de v como identificador
 static int eh_ou_logico(void)
 {
     return token_atual.atomo == OU_LOGICO ||
@@ -231,12 +65,43 @@ static void consumir_ou_logico(void)
     }
     else
     {
-        printf("Erro de sintaxe na linha %d: esperado operador logico v, encontrado %s (%s)\n",
-               token_atual.linha,
-               nome_atomo(token_atual.atomo),
-               token_atual.texto);
-        exit(1);
+        erro_sintatico("sOR");
     }
+}
+
+static const char *nome_atomo(TAtomo atomo)
+{
+    return lex_token_name(atomo);
+}
+
+static void erro_sintatico(const char *esperado)
+{
+    diag_error_sintatico(token_atual.linha, esperado, nome_atomo(token_atual.atomo), token_atual.texto);
+}
+
+static void erro_semantico(const char *mensagem)
+{
+    diag_error_semantico(token_atual.linha, mensagem, token_atual.texto);
+}
+
+static void avancar(void)
+{
+    token_atual = lex_next();
+}
+
+static void consumir(TAtomo esperado)
+{
+    if (token_atual.atomo != esperado)
+    {
+        erro_sintatico(nome_atomo(esperado));
+    }
+    avancar();
+}
+
+static int eh_relacional(TAtomo atomo)
+{
+    return atomo == IGUAL || atomo == DIFERENTE || atomo == MAIOR ||
+           atomo == MENOR || atomo == MAIOR_IGUAL || atomo == MENOR_IGUAL;
 }
 
 static const char *tipo_atual_para_texto(TAtomo atomo)
@@ -247,55 +112,43 @@ static const char *tipo_atual_para_texto(TAtomo atomo)
         return "bool";
     if (atomo == TK_CHAR)
         return "char";
-
     return "desconhecido";
 }
 
-// Declaracoes de tipo: int, bool, char
 static void parse_tipo(void)
 {
     if (token_atual.atomo == TK_INT)
-    {
         consumir(TK_INT);
-    }
     else if (token_atual.atomo == TK_BOOL)
-    {
         consumir(TK_BOOL);
-    }
     else if (token_atual.atomo == TK_CHAR)
-    {
         consumir(TK_CHAR);
-    }
     else
-    {
-        printf("Erro de sintaxe na linha %d: tipo invalido (%s)\n",
-               token_atual.linha,
-               token_atual.texto);
-        exit(1);
-    }
+        erro_sintatico("tipo");
 }
 
 static void parse_identificador_declaracao(char nome[], int *extra)
 {
     strcpy(nome, token_atual.texto);
     consumir(IDENTIFICADOR);
-
     *extra = 0;
-
     if (token_atual.atomo == ABRE_COL)
     {
         consumir(ABRE_COL);
-        *extra = atoi(token_atual.texto);
+        if (token_atual.atomo != CONST_INT)
+        {
+            erro_sintatico("sCTEINT");
+        }
+        *extra = token_atual.atributo_numero;
         consumir(CONST_INT);
         consumir(FECHA_COL);
     }
 }
 
-// Declaracao: x, y, z: int; ou v[10]: int;
 static void parse_declaracao(void)
 {
-    char nomes[50][100];
-    int extras[50];
+    char nomes[64][100];
+    int extras[64];
     int quantidade = 0;
     const char *tipo_texto;
     int i;
@@ -319,38 +172,32 @@ static void parse_declaracao(void)
     {
         if (!ts_insert(nomes[i], "variavel", tipo_texto, extras[i]))
         {
-            char mensagem[200];
-
-            sprintf(
-                mensagem,
-                "Identificador '%s' ja declarado no escopo %s",
-                nomes[i],
-                ts_current_scope()
-            );
-
-            diag_error_linha(token_atual.linha, mensagem);
+            token_atual.linha = token_atual.linha;
+            diag_error_semantico(token_atual.linha, "identificador ja declarado no escopo", nomes[i]);
         }
     }
 }
 
 static void parse_globals(void)
 {
+    diag_info("ENTRA <glob>");
     consumir(TK_GLOBALS);
-
     while (token_atual.atomo == IDENTIFICADOR)
     {
         parse_declaracao();
     }
+    diag_info("SAI <glob>");
 }
 
 static void parse_locals(void)
 {
+    diag_info("ENTRA <locals>");
     consumir(TK_LOCALS);
-
     while (token_atual.atomo == IDENTIFICADOR)
     {
         parse_declaracao();
     }
+    diag_info("SAI <locals>");
 }
 
 static void parse_parametro(void)
@@ -361,34 +208,22 @@ static void parse_parametro(void)
     strcpy(nome, token_atual.texto);
     consumir(IDENTIFICADOR);
     consumir(DOIS_PONTOS);
-
     tipo_texto = tipo_atual_para_texto(token_atual.atomo);
     parse_tipo();
 
     if (!ts_insert(nome, "parametro", tipo_texto, 0))
     {
-        char mensagem[200];
-
-        sprintf(
-            mensagem,
-            "Parametro '%s' ja declarado no escopo %s",
-            nome,
-            ts_current_scope()
-        );
-
-        diag_error_linha(token_atual.linha, mensagem);
+        diag_error_semantico(token_atual.linha, "parametro ja declarado no escopo", nome);
     }
 }
 
 static void parse_lista_parametros(int *quantidade_parametros)
 {
     *quantidade_parametros = 0;
-
     if (token_atual.atomo == IDENTIFICADOR)
     {
         parse_parametro();
         (*quantidade_parametros)++;
-
         while (token_atual.atomo == VIRGULA)
         {
             consumir(VIRGULA);
@@ -402,45 +237,30 @@ static void parse_proc_decl_resto(void)
 {
     char nome[100];
     int quantidade_parametros = 0;
-
+    Simbolo *s;
     strcpy(nome, token_atual.texto);
 
     if (!ts_insert(nome, "procedimento", "-", 0))
     {
-        char mensagem[200];
-
-        sprintf(
-            mensagem,
-            "Procedimento '%s' ja declarado no escopo %s",
-            nome,
-            ts_current_scope()
-        );
-
-        diag_error_linha(token_atual.linha, mensagem);
+        diag_error_semantico(token_atual.linha, "procedimento ja declarado", nome);
     }
 
     consumir(IDENTIFICADOR);
     consumir(ABRE_PAR);
-
     ts_enter_scope(nome);
     parse_lista_parametros(&quantidade_parametros);
     consumir(FECHA_PAR);
-
     if (token_atual.atomo == TK_LOCALS)
     {
         parse_locals();
     }
-
     parse_bloco();
     ts_exit_scope();
 
-    // atualiza extra do procedimento com quantidade de parametros
+    s = ts_lookup_in_scope(nome, "global");
+    if (s != NULL)
     {
-        Simbolo *s = ts_lookup(nome);
-        if (s != NULL)
-        {
-            s->extra = quantidade_parametros;
-        }
+        s->extra = quantidade_parametros;
     }
 }
 
@@ -449,43 +269,37 @@ static void parse_funcao_decl(void)
     char nome[100];
     const char *tipo_texto;
     int quantidade_parametros = 0;
+    Simbolo *s;
 
     consumir(TK_FN);
-
     strcpy(nome, token_atual.texto);
-    consumir(IDENTIFICADOR);
 
+    if (!ts_insert(nome, "funcao", "pendente", 0))
+    {
+        diag_error_semantico(token_atual.linha, "funcao ja declarada", nome);
+    }
+
+    consumir(IDENTIFICADOR);
     consumir(ABRE_PAR);
     ts_enter_scope(nome);
     parse_lista_parametros(&quantidade_parametros);
     consumir(FECHA_PAR);
     consumir(DOIS_PONTOS);
-
     tipo_texto = tipo_atual_para_texto(token_atual.atomo);
     parse_tipo();
-    ts_exit_scope();
 
-    if (!ts_insert(nome, "funcao", tipo_texto, quantidade_parametros))
+    s = ts_lookup_in_scope(nome, "global");
+    if (s != NULL)
     {
-        char mensagem[200];
-
-        sprintf(
-            mensagem,
-            "Funcao '%s' ja declarada no escopo %s",
-            nome,
-            ts_current_scope()
-        );
-
-        diag_error_linha(token_atual.linha, mensagem);
+        strncpy(s->tipo, tipo_texto, TAM_TIPO - 1);
+        s->tipo[TAM_TIPO - 1] = '\0';
+        s->extra = quantidade_parametros;
     }
-
-    ts_enter_scope(nome);
 
     if (token_atual.atomo == TK_LOCALS)
     {
         parse_locals();
     }
-
     parse_bloco();
     ts_exit_scope();
 }
@@ -493,7 +307,6 @@ static void parse_funcao_decl(void)
 static void parse_indice_vetor(void)
 {
     consumir(ABRE_COL);
-
     if (token_atual.atomo == CONST_INT)
     {
         consumir(CONST_INT);
@@ -502,41 +315,32 @@ static void parse_indice_vetor(void)
     {
         if (ts_lookup(token_atual.texto) == NULL)
         {
-            printf("Erro semantico: identificador '%s' nao declarado\n", token_atual.texto);
-            exit(1);
+            erro_semantico("identificador nao declarado");
         }
         consumir(IDENTIFICADOR);
     }
     else
     {
-        printf("Erro de sintaxe na linha %d: indice de vetor invalido (%s)\n",
-               token_atual.linha,
-               token_atual.texto);
-        exit(1);
+        erro_sintatico("indice de vetor");
     }
-
     consumir(FECHA_COL);
 }
 
 static void parse_chamada_resto(void)
 {
     consumir(ABRE_PAR);
-
     if (token_atual.atomo != FECHA_PAR)
     {
         parse_expr();
-
         while (token_atual.atomo == VIRGULA)
         {
             consumir(VIRGULA);
             parse_expr();
         }
     }
-
     consumir(FECHA_PAR);
 }
 
-// O fator é a menor unidade da expressão
 static void parse_fator(void)
 {
     if (token_atual.atomo == NEGACAO)
@@ -553,12 +357,9 @@ static void parse_fator(void)
     {
         if (ts_lookup(token_atual.texto) == NULL)
         {
-            printf("Erro semantico: identificador '%s' nao declarado\n", token_atual.texto);
-            exit(1);
+            erro_semantico("identificador nao declarado");
         }
-
         consumir(IDENTIFICADOR);
-
         if (token_atual.atomo == ABRE_PAR)
         {
             parse_chamada_resto();
@@ -569,25 +370,15 @@ static void parse_fator(void)
         }
     }
     else if (token_atual.atomo == CONST_INT)
-    {
         consumir(CONST_INT);
-    }
     else if (token_atual.atomo == CONST_CHAR)
-    {
         consumir(CONST_CHAR);
-    }
     else if (token_atual.atomo == STRING)
-    {
         consumir(STRING);
-    }
     else if (token_atual.atomo == TK_TRUE)
-    {
         consumir(TK_TRUE);
-    }
     else if (token_atual.atomo == TK_FALSE)
-    {
         consumir(TK_FALSE);
-    }
     else if (token_atual.atomo == ABRE_PAR)
     {
         consumir(ABRE_PAR);
@@ -595,12 +386,93 @@ static void parse_fator(void)
         consumir(FECHA_PAR);
     }
     else
+        erro_sintatico("fator");
+}
+
+static void parse_mult_div(void)
+{
+    parse_fator();
+    while (token_atual.atomo == MULTIPLICACAO || token_atual.atomo == DIVISAO)
     {
-        printf("Erro de sintaxe na linha %d: fator invalido (%s)\n",
-               token_atual.linha,
-               token_atual.texto);
-        exit(1);
+        if (token_atual.atomo == MULTIPLICACAO)
+            consumir(MULTIPLICACAO);
+        else
+            consumir(DIVISAO);
+        parse_fator();
     }
+}
+
+static void parse_soma_sub(void)
+{
+    parse_mult_div();
+    while (token_atual.atomo == SOMA || token_atual.atomo == SUBTRACAO)
+    {
+        if (token_atual.atomo == SOMA)
+            consumir(SOMA);
+        else
+            consumir(SUBTRACAO);
+        parse_mult_div();
+    }
+}
+
+static void parse_relacional(void)
+{
+    parse_soma_sub();
+    while (eh_relacional(token_atual.atomo))
+    {
+        TAtomo op = token_atual.atomo;
+        consumir(op);
+        parse_soma_sub();
+    }
+}
+
+static void parse_and(void)
+{
+    parse_relacional();
+    while (token_atual.atomo == E_LOGICO)
+    {
+        consumir(E_LOGICO);
+        parse_relacional();
+    }
+}
+
+static void parse_expr(void)
+{
+    parse_and();
+    while (eh_ou_logico())
+    {
+        consumir_ou_logico();
+        parse_and();
+    }
+}
+
+static void parse_print(void)
+{
+    consumir(TK_PRINT);
+    consumir(ABRE_PAR);
+    parse_expr();
+    while (token_atual.atomo == VIRGULA)
+    {
+        consumir(VIRGULA);
+        parse_expr();
+    }
+    consumir(FECHA_PAR);
+}
+
+static void parse_scan(void)
+{
+    consumir(TK_SCAN);
+    consumir(ABRE_PAR);
+    if (token_atual.atomo != IDENTIFICADOR || ts_lookup(token_atual.texto) == NULL)
+    {
+        erro_semantico("identificador nao declarado");
+    }
+    consumir(IDENTIFICADOR);
+    if (token_atual.atomo == ABRE_COL)
+    {
+        parse_indice_vetor();
+    }
+    consumir(FECHA_PAR);
 }
 
 static void parse_if(void)
@@ -609,9 +481,7 @@ static void parse_if(void)
     consumir(ABRE_PAR);
     parse_expr();
     consumir(FECHA_PAR);
-
     parse_comando();
-
     if (token_atual.atomo == TK_ELSE)
     {
         consumir(TK_ELSE);
@@ -628,26 +498,21 @@ static void parse_ret(void)
 static void parse_loop(void)
 {
     consumir(TK_LOOP);
-
-    // Caso loop while
     if (token_atual.atomo == TK_WHILE)
     {
         consumir(TK_WHILE);
         consumir(ABRE_PAR);
         parse_expr();
         consumir(FECHA_PAR);
-
         parse_comando();
     }
     else
     {
-        // Caso loop until
         while (token_atual.atomo != TK_UNTIL)
         {
             parse_comando();
             consumir(PONTO_E_VIRGULA);
         }
-
         consumir(TK_UNTIL);
         consumir(ABRE_PAR);
         parse_expr();
@@ -658,55 +523,42 @@ static void parse_loop(void)
 static void parse_for(void)
 {
     consumir(TK_FOR);
-
-    if (ts_lookup(token_atual.texto) == NULL)
+    if (token_atual.atomo != IDENTIFICADOR || ts_lookup(token_atual.texto) == NULL)
     {
-        printf("Erro semantico: identificador '%s' nao declarado\n", token_atual.texto);
-        exit(1);
+        erro_semantico("identificador nao declarado");
     }
-
     consumir(IDENTIFICADOR);
-
     if (token_atual.atomo == ABRE_COL)
     {
         parse_indice_vetor();
     }
-
     consumir(ATRIBUICAO);
     parse_expr();
-
     consumir(TK_TO);
     parse_expr();
-
     if (token_atual.atomo == TK_STEP)
     {
         consumir(TK_STEP);
         parse_expr();
     }
-
     consumir(TK_DO);
     parse_comando();
 }
 
-// Comandos do match
 static void parse_item_when(void)
 {
     if (token_atual.atomo == SUBTRACAO)
     {
         consumir(SUBTRACAO);
     }
-
     consumir(CONST_INT);
-
     if (token_atual.atomo == INTERVALO)
     {
         consumir(INTERVALO);
-
         if (token_atual.atomo == SUBTRACAO)
         {
             consumir(SUBTRACAO);
         }
-
         consumir(CONST_INT);
     }
 }
@@ -714,7 +566,6 @@ static void parse_item_when(void)
 static void parse_condicao_when(void)
 {
     parse_item_when();
-
     while (token_atual.atomo == VIRGULA)
     {
         consumir(VIRGULA);
@@ -737,12 +588,10 @@ static void parse_match(void)
     consumir(ABRE_PAR);
     parse_expr();
     consumir(FECHA_PAR);
-
     while (token_atual.atomo == TK_WHEN)
     {
         parse_when();
     }
-
     if (token_atual.atomo == TK_OTHERWISE)
     {
         consumir(TK_OTHERWISE);
@@ -750,129 +599,16 @@ static void parse_match(void)
         parse_comando();
         consumir(PONTO_E_VIRGULA);
     }
-
     consumir(TK_END);
-}
-
-static void parse_mult_div(void)
-{
-    parse_fator();
-
-    while (token_atual.atomo == MULTIPLICACAO || token_atual.atomo == DIVISAO)
-    {
-        if (token_atual.atomo == MULTIPLICACAO)
-        {
-            consumir(MULTIPLICACAO);
-        }
-        else
-        {
-            consumir(DIVISAO);
-        }
-
-        parse_fator();
-    }
-}
-
-static void parse_soma_sub(void)
-{
-    parse_mult_div();
-
-    while (token_atual.atomo == SOMA || token_atual.atomo == SUBTRACAO)
-    {
-        if (token_atual.atomo == SOMA)
-        {
-            consumir(SOMA);
-        }
-        else
-        {
-            consumir(SUBTRACAO);
-        }
-
-        parse_mult_div();
-    }
-}
-
-static void parse_relacional(void)
-{
-    parse_soma_sub();
-
-    while (eh_relacional(token_atual.atomo))
-    {
-        TAtomo operador = token_atual.atomo;
-        consumir(operador);
-        parse_soma_sub();
-    }
-}
-
-static void parse_and(void)
-{
-    parse_relacional();
-
-    while (token_atual.atomo == E_LOGICO)
-    {
-        consumir(E_LOGICO);
-        parse_relacional();
-    }
-}
-
-static void parse_expr(void)
-{
-    parse_and();
-
-    while (eh_ou_logico())
-    {
-        consumir_ou_logico();
-        parse_and();
-    }
-}
-
-static void parse_print(void)
-{
-    consumir(TK_PRINT);
-    consumir(ABRE_PAR);
-
-    parse_expr();
-
-    while (token_atual.atomo == VIRGULA)
-    {
-        consumir(VIRGULA);
-        parse_expr();
-    }
-
-    consumir(FECHA_PAR);
-}
-
-static void parse_scan(void)
-{
-    consumir(TK_SCAN);
-    consumir(ABRE_PAR);
-
-    if (ts_lookup(token_atual.texto) == NULL)
-    {
-        printf("Erro semantico: identificador '%s' nao declarado\n", token_atual.texto);
-        exit(1);
-    }
-
-    consumir(IDENTIFICADOR);
-
-    if (token_atual.atomo == ABRE_COL)
-    {
-        parse_indice_vetor();
-    }
-
-    consumir(FECHA_PAR);
 }
 
 static void parse_comando_identificador(void)
 {
     if (ts_lookup(token_atual.texto) == NULL)
     {
-        printf("Erro semantico: identificador '%s' nao declarado\n", token_atual.texto);
-        exit(1);
+        erro_semantico("identificador nao declarado");
     }
-
     consumir(IDENTIFICADOR);
-
     if (token_atual.atomo == ABRE_PAR)
     {
         parse_chamada_resto();
@@ -883,7 +619,6 @@ static void parse_comando_identificador(void)
         {
             parse_indice_vetor();
         }
-
         consumir(ATRIBUICAO);
         parse_expr();
     }
@@ -891,81 +626,55 @@ static void parse_comando_identificador(void)
 
 static void parse_comando(void)
 {
-    log_trace_enter("parse_comando");
-
     if (token_atual.atomo == TK_PRINT)
-    {
         parse_print();
-    }
     else if (token_atual.atomo == TK_SCAN)
-    {
         parse_scan();
-    }
     else if (token_atual.atomo == TK_IF)
-    {
         parse_if();
-    }
     else if (token_atual.atomo == TK_START)
-    {
         parse_bloco();
-    }
     else if (token_atual.atomo == TK_RET)
-    {
         parse_ret();
-    }
     else if (token_atual.atomo == TK_LOOP)
-    {
         parse_loop();
-    }
     else if (token_atual.atomo == TK_FOR)
-    {
         parse_for();
-    }
     else if (token_atual.atomo == TK_MATCH)
-    {
         parse_match();
-    }
     else if (token_atual.atomo == IDENTIFICADOR)
-    {
         parse_comando_identificador();
-    }
     else
-    {
-        printf("Erro de sintaxe na linha %d: comando invalido (%s)\n",
-               token_atual.linha,
-               token_atual.texto);
-        exit(1);
-    }
-
-    log_trace_exit("parse_comando");
+        erro_sintatico("comando");
 }
 
 static void parse_bloco(void)
 {
-    log_trace_enter("parse_bloco");
-
+    diag_info("ENTRA <bco>");
     consumir(TK_START);
-
     while (token_atual.atomo != TK_END)
     {
         parse_comando();
         consumir(PONTO_E_VIRGULA);
     }
-
     consumir(TK_END);
-    log_trace_exit("parse_bloco");
+    diag_info("SAI <bco>");
 }
 
 void parser_init(void)
 {
-    log_trace_line("parser_init");
     avancar();
 }
 
 void parse_program(void)
 {
-    log_trace_enter("parse_program");
+    diag_info("ENTRA <ini>");
+    parse_program_interno();
+    diag_info("SAI <ini>");
+}
 
+static void parse_program_interno(void)
+{
     consumir(TK_MODULE);
     consumir(IDENTIFICADOR);
     consumir(PONTO_E_VIRGULA);
@@ -984,25 +693,19 @@ void parse_program(void)
         else
         {
             consumir(TK_PROC);
-
             if (token_atual.atomo == TK_MAIN)
             {
                 consumir(TK_MAIN);
                 consumir(ABRE_PAR);
                 consumir(FECHA_PAR);
-
                 ts_enter_scope("main");
-
                 if (token_atual.atomo == TK_LOCALS)
                 {
                     parse_locals();
                 }
-
                 parse_bloco();
                 ts_exit_scope();
-
                 consumir(FIM_ARQUIVO);
-                log_trace_exit("parse_program");
                 return;
             }
             else
@@ -1012,11 +715,5 @@ void parse_program(void)
         }
     }
 
-    log_trace_exit("parse_program");
-
-    printf("Erro de sintaxe na linha %d: esperado proc main, encontrado %s (%s)\n",
-           token_atual.linha,
-           nome_atomo(token_atual.atomo),
-           token_atual.texto);
-    exit(1);
+    erro_sintatico("proc main");
 }

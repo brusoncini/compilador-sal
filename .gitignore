@@ -1,6 +1,6 @@
 salc
 arquivo.sal
-.vscode
+.vscode/
 
 *.exe
 *.o

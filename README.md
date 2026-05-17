@@ -7,6 +7,7 @@
   <img src="https://img.shields.io/badge/tipo-projeto%20acadêmico-purple">
 </p>
 
+
 Compilador desenvolvido em C para a linguagem **SAL (Simple Academic Language)**, criado para a disciplina de Compiladores.
 
 O projeto implementa:
@@ -17,6 +18,11 @@ O projeto implementa:
 - Controle de Escopos
 - Geração de Logs
 - Interface CLI
+
+## 🚧 Status
+
+Projeto em desenvolvimento!!!
+
 
 ## 📚 Sobre a Linguagem SAL
 
@@ -89,17 +95,6 @@ start
 end
 ```
 
+## 👩🏻‍💻 Feito por
 
-## 👥 Feito por
-
-|Nome               | RA         |
-|-------------------|------------|
-|Bruna Soncini      | 10428267   |
-|Felipe Nakandakari | 10395160   |
-
-Universidade Presbiteriana Mackenzie - Curso de Ciência da Computação
-
-
-## 🚧 Status
-
-Projeto em desenvolvimento!!!
+Desenvolvido com ❤️ por [Bruna Soncini](www.linkedin.com/in/brunasoncini/).

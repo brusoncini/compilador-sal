@@ -4,7 +4,7 @@
 #define TAM_LEXEMA 100
 #define TAM_CATEGORIA 30
 #define TAM_TIPO 30
-#define TAM_ESCOPO 100
+#define TAM_ESCOPO 120
 
 typedef struct Simbolo
 {
@@ -18,15 +18,13 @@ typedef struct Simbolo
 
 void ts_init(void);
 void ts_free(void);
-
 void ts_enter_scope(const char *nome);
 void ts_exit_scope(void);
-
 const char *ts_current_scope(void);
-
 int ts_insert(const char *lexema, const char *categoria, const char *tipo, int extra);
 Simbolo *ts_lookup(const char *lexema);
-
+Simbolo *ts_lookup_in_scope(const char *lexema, const char *escopo);
 void ts_print(void);
+void ts_dump_to_file(const char *caminho);
 
 #endif

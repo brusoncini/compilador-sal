@@ -1,15 +1,8 @@
-/*
-    Gerencia escopos, inserção e busca de identificadores.
-    Deve espelhar a estrutura de blocos da SAL (globals, locals e blocos internos de start...end) e suas regras de visibilidade.
-    Interface: ts_insert, ts_lookup
-*/
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "symtab.h"
-#include "log.h"
 
 typedef struct Escopo
 {
@@ -23,24 +16,20 @@ static Escopo *pilha_escopos = NULL;
 static Escopo *criar_escopo(const char *nome)
 {
     Escopo *novo = (Escopo *)malloc(sizeof(Escopo));
-
     if (novo == NULL)
     {
         printf("Erro ao alocar memoria para escopo.\n");
         exit(1);
     }
-
     strncpy(novo->nome, nome, TAM_ESCOPO - 1);
     novo->nome[TAM_ESCOPO - 1] = '\0';
     novo->anterior = NULL;
-
     return novo;
 }
 
 static Simbolo *criar_simbolo(const char *lexema, const char *categoria, const char *tipo, const char *escopo, int extra)
 {
     Simbolo *novo = (Simbolo *)malloc(sizeof(Simbolo));
-
     if (novo == NULL)
     {
         printf("Erro ao alocar memoria para simbolo.\n");
@@ -49,19 +38,14 @@ static Simbolo *criar_simbolo(const char *lexema, const char *categoria, const c
 
     strncpy(novo->lexema, lexema, TAM_LEXEMA - 1);
     novo->lexema[TAM_LEXEMA - 1] = '\0';
-
     strncpy(novo->categoria, categoria, TAM_CATEGORIA - 1);
     novo->categoria[TAM_CATEGORIA - 1] = '\0';
-
     strncpy(novo->tipo, tipo, TAM_TIPO - 1);
     novo->tipo[TAM_TIPO - 1] = '\0';
-
     strncpy(novo->escopo, escopo, TAM_ESCOPO - 1);
     novo->escopo[TAM_ESCOPO - 1] = '\0';
-
     novo->extra = extra;
     novo->prox = NULL;
-
     return novo;
 }
 
@@ -74,28 +58,21 @@ void ts_init(void)
 
 void ts_free(void)
 {
-    Simbolo *atual_simbolo = lista_simbolos;
-    Simbolo *prox_simbolo;
-
-    Escopo *atual_escopo = pilha_escopos;
-    Escopo *prox_escopo;
-
-    while (atual_simbolo != NULL)
+    Simbolo *sim = lista_simbolos;
+    while (sim != NULL)
     {
-        prox_simbolo = atual_simbolo->prox;
-        free(atual_simbolo);
-        atual_simbolo = prox_simbolo;
+        Simbolo *prox = sim->prox;
+        free(sim);
+        sim = prox;
     }
-
-    while (atual_escopo != NULL)
-    {
-        prox_escopo = atual_escopo->anterior;
-        free(atual_escopo);
-        atual_escopo = prox_escopo;
-    }
-
     lista_simbolos = NULL;
-    pilha_escopos = NULL;
+
+    while (pilha_escopos != NULL)
+    {
+        Escopo *prox = pilha_escopos->anterior;
+        free(pilha_escopos);
+        pilha_escopos = prox;
+    }
 }
 
 void ts_enter_scope(const char *nome)
@@ -107,16 +84,12 @@ void ts_enter_scope(const char *nome)
 
 void ts_exit_scope(void)
 {
-    Escopo *removido;
-
-    if (pilha_escopos == NULL)
+    if (pilha_escopos != NULL)
     {
-        return;
+        Escopo *removido = pilha_escopos;
+        pilha_escopos = pilha_escopos->anterior;
+        free(removido);
     }
-
-    removido = pilha_escopos;
-    pilha_escopos = pilha_escopos->anterior;
-    free(removido);
 }
 
 const char *ts_current_scope(void)
@@ -125,92 +98,93 @@ const char *ts_current_scope(void)
     {
         return "sem_escopo";
     }
-
     return pilha_escopos->nome;
+}
+
+Simbolo *ts_lookup_in_scope(const char *lexema, const char *escopo)
+{
+    Simbolo *atual = lista_simbolos;
+    while (atual != NULL)
+    {
+        if (strcmp(atual->lexema, lexema) == 0 && strcmp(atual->escopo, escopo) == 0)
+        {
+            return atual;
+        }
+        atual = atual->prox;
+    }
+    return NULL;
 }
 
 int ts_insert(const char *lexema, const char *categoria, const char *tipo, int extra)
 {
-    Simbolo *atual = lista_simbolos;
     Simbolo *novo;
+    Simbolo *atual;
 
-    while (atual != NULL)
+    if (ts_lookup_in_scope(lexema, ts_current_scope()) != NULL)
     {
-        if (strcmp(atual->lexema, lexema) == 0 &&
-            strcmp(atual->escopo, ts_current_scope()) == 0)
-        {
-            return 0;
-        }
-
-        atual = atual->prox;
+        return 0;
     }
 
     novo = criar_simbolo(lexema, categoria, tipo, ts_current_scope(), extra);
-
     if (lista_simbolos == NULL)
     {
         lista_simbolos = novo;
-    }
-    else
-    {
-        atual = lista_simbolos;
-        while (atual->prox != NULL)
-        {
-            atual = atual->prox;
-        }
-        atual->prox = novo;
+        return 1;
     }
 
+    atual = lista_simbolos;
+    while (atual->prox != NULL)
+    {
+        atual = atual->prox;
+    }
+    atual->prox = novo;
     return 1;
 }
 
 Simbolo *ts_lookup(const char *lexema)
 {
-    Escopo *escopo_atual = pilha_escopos;
-
-    while (escopo_atual != NULL)
+    Escopo *esc = pilha_escopos;
+    while (esc != NULL)
     {
-        Simbolo *atual = lista_simbolos;
-
-        while (atual != NULL)
+        Simbolo *encontrado = ts_lookup_in_scope(lexema, esc->nome);
+        if (encontrado != NULL)
         {
-            if (strcmp(atual->lexema, lexema) == 0 &&
-                strcmp(atual->escopo, escopo_atual->nome) == 0)
-            {
-                return atual;
-            }
-
-            atual = atual->prox;
+            return encontrado;
         }
-
-        escopo_atual = escopo_atual->anterior;
+        esc = esc->anterior;
     }
-
     return NULL;
+}
+
+static void ts_imprimir_em(FILE *saida)
+{
+    Simbolo *atual = lista_simbolos;
+    while (atual != NULL)
+    {
+        fprintf(saida, "SCOPE=%s  id=\"%s\"  cat=%s  tipo=%s  extra=%d\n",
+                atual->escopo,
+                atual->lexema,
+                atual->categoria,
+                atual->tipo,
+                atual->extra);
+        atual = atual->prox;
+    }
 }
 
 void ts_print(void)
 {
-    Simbolo *atual = lista_simbolos;
-
     printf("\n=== TABELA DE SIMBOLOS ===\n");
+    ts_imprimir_em(stdout);
+}
 
-    while (atual != NULL)
+void ts_dump_to_file(const char *caminho)
+{
+    FILE *arquivo = fopen(caminho, "w");
+    if (arquivo == NULL)
     {
-        printf("SCOPE=%s  id=\"%s\"  cat=%s  tipo=%s  extra=%d\n",
-               atual->escopo,
-               atual->lexema,
-               atual->categoria,
-               atual->tipo,
-               atual->extra);
-
-        log_symtab_line(
-            atual->escopo,
-            atual->lexema,
-            atual->categoria,
-            atual->tipo,
-            atual->extra);
-
-        atual = atual->prox;
+        printf("Erro ao criar arquivo de tabela de simbolos.\n");
+        exit(1);
     }
+    ts_imprimir_em(arquivo);
+    fclose(arquivo);
 }

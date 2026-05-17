@@ -9,7 +9,6 @@ typedef enum
     CONST_CHAR,
     STRING,
     IDENTIFICADOR,
-
     TK_MODULE,
     TK_PROC,
     TK_FN,
@@ -38,7 +37,6 @@ typedef enum
     TK_CHAR,
     TK_TRUE,
     TK_FALSE,
-
     ATRIBUICAO,
     SOMA,
     SUBTRACAO,
@@ -53,7 +51,6 @@ typedef enum
     E_LOGICO,
     OU_LOGICO,
     NEGACAO,
-
     ABRE_PAR,
     FECHA_PAR,
     ABRE_COL,
@@ -63,10 +60,8 @@ typedef enum
     DOIS_PONTOS,
     INTERVALO,
     IMPLICA,
-
     ERRO,
     FIM_ARQUIVO
-
 } TAtomo;
 
 typedef struct
@@ -74,14 +69,11 @@ typedef struct
     TAtomo atomo;
     int linha;
     int atributo_numero;
-    char texto[100];
-
+    char texto[256];
 } TInfoAtomo;
 
 int lex_init(FILE *arquivo);
-
 TInfoAtomo lex_next(void);
-
-const char *lex_nome_atomo(TAtomo atomo);
+const char *lex_token_name(TAtomo atomo);
 
 #endif

@@ -3,13 +3,13 @@
 
 typedef struct
 {
-    const char *arquivo_fonte;
+    char arquivo_fonte[512];
     int gerar_tokens;
     int gerar_symtab;
     int gerar_trace;
 } Opcoes;
 
-int opts_parse(int argc, char *argv[], Opcoes *opcoes);
-void opts_print_uso(void);
+int opts_parse(int argc, char *argv[]);
+const Opcoes *opts_get(void);
 
 #endif

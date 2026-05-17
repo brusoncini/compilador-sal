@@ -1,58 +1,42 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "diag.h"
 #include "lex.h"
+#include "log.h"
+#include "opt.h"
 #include "parser.h"
 #include "symtab.h"
-#include "opt.h"
-#include "log.h"
 
 int main(int argc, char *argv[])
 {
     FILE *arquivo;
-    Opcoes opcoes;
+    const Opcoes *opcoes;
+    char caminho_trace[520];
 
-    if (!opts_parse(argc, argv, &opcoes))
+    if (!opts_parse(argc, argv))
     {
         return 1;
     }
 
-    arquivo = fopen(opcoes.arquivo_fonte, "r");
-
+    opcoes = opts_get();
+    arquivo = fopen(opcoes->arquivo_fonte, "r");
     if (arquivo == NULL)
     {
-        printf("Nao foi possivel abrir o arquivo: %s\n", opcoes.arquivo_fonte);
+        printf("Nao foi possivel abrir o arquivo '%s'.\n", opcoes->arquivo_fonte);
         return 1;
     }
 
-    if (opcoes.gerar_tokens)
+    if (opcoes->gerar_tokens)
     {
-        if (!log_tokens_init(opcoes.arquivo_fonte))
-        {
-            fclose(arquivo);
-            return 1;
-        }
+        log_tokens_from_source(opcoes->arquivo_fonte);
     }
 
-    if (opcoes.gerar_symtab)
+    if (opcoes->gerar_trace)
     {
-        if (!log_symtab_init(opcoes.arquivo_fonte))
-        {
-            log_tokens_close();
-            fclose(arquivo);
-            return 1;
-        }
-    }
-
-    if (opcoes.gerar_trace)
-    {
-        if (!log_trace_init(opcoes.arquivo_fonte))
-        {
-            log_tokens_close();
-            log_symtab_close();
-            fclose(arquivo);
-            return 1;
-        }
+        log_trace_from_source(opcoes->arquivo_fonte, caminho_trace, sizeof(caminho_trace));
+        diag_set_trace(1);
+        diag_set_trace_file(caminho_trace);
     }
 
     if (!lex_init(arquivo))
@@ -62,18 +46,23 @@ int main(int argc, char *argv[])
     }
 
     ts_init();
-
     parser_init();
     parse_program();
 
-    printf("Analise sintatica concluida com sucesso.\n");
-    ts_print();
+    printf("Analise concluida com sucesso.\n");
 
+    if (opcoes->gerar_symtab)
+    {
+        log_symtab_from_source(opcoes->arquivo_fonte);
+    }
+    else
+    {
+        ts_print();
+    }
+
+    log_token_close();
+    diag_close();
     ts_free();
-    log_tokens_close();
-    log_symtab_close();
-    log_trace_close();
     fclose(arquivo);
-
     return 0;
 }
