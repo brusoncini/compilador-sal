@@ -38,14 +38,21 @@ static Simbolo *criar_simbolo(const char *lexema, const char *categoria, const c
 
     strncpy(novo->lexema, lexema, TAM_LEXEMA - 1);
     novo->lexema[TAM_LEXEMA - 1] = '\0';
+
     strncpy(novo->categoria, categoria, TAM_CATEGORIA - 1);
     novo->categoria[TAM_CATEGORIA - 1] = '\0';
+
     strncpy(novo->tipo, tipo, TAM_TIPO - 1);
     novo->tipo[TAM_TIPO - 1] = '\0';
+
     strncpy(novo->escopo, escopo, TAM_ESCOPO - 1);
     novo->escopo[TAM_ESCOPO - 1] = '\0';
+
+    novo->parametros[0] = '\0';
+
     novo->extra = extra;
     novo->prox = NULL;
+
     return novo;
 }
 
@@ -159,14 +166,23 @@ Simbolo *ts_lookup(const char *lexema)
 static void ts_imprimir_em(FILE *saida)
 {
     Simbolo *atual = lista_simbolos;
+
     while (atual != NULL)
     {
-        fprintf(saida, "SCOPE=%s  id=\"%s\"  cat=%s  tipo=%s  extra=%d\n",
+        fprintf(saida, "SCOPE=%s  id=\"%s\"  cat=%s  tipo=%s  extra=%d",
                 atual->escopo,
                 atual->lexema,
                 atual->categoria,
                 atual->tipo,
                 atual->extra);
+
+        if (strlen(atual->parametros) > 0)
+        {
+            fprintf(saida, "  parametros=%s", atual->parametros);
+        }
+
+        fprintf(saida, "\n");
+
         atual = atual->prox;
     }
 }
@@ -187,4 +203,34 @@ void ts_dump_to_file(const char *caminho)
     }
     ts_imprimir_em(arquivo);
     fclose(arquivo);
+}
+
+void ts_set_parametros(Simbolo *simbolo, const char *parametros, int quantidade)
+{
+    if (simbolo == NULL)
+    {
+        return;
+    }
+
+    if (parametros == NULL)
+    {
+        simbolo->parametros[0] = '\0';
+    }
+    else
+    {
+        strncpy(simbolo->parametros, parametros, TAM_PARAMETROS - 1);
+        simbolo->parametros[TAM_PARAMETROS - 1] = '\0';
+    }
+
+    simbolo->extra = quantidade;
+}
+
+const char *ts_get_parametros(const Simbolo *simbolo)
+{
+    if (simbolo == NULL)
+    {
+        return "";
+    }
+
+    return simbolo->parametros;
 }
