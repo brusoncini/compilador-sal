@@ -7,6 +7,7 @@
 #include "opt.h"
 #include "parser.h"
 #include "symtab.h"
+#include "gerador.h"
 
 int main(int argc, char *argv[])
 {
@@ -46,10 +47,15 @@ int main(int argc, char *argv[])
     }
 
     ts_init();
+    
+    gerador_init(opcoes->arquivo_fonte);
     parser_init();
     parse_program();
 
+    gerador_close();
+
     printf("Analise concluida com sucesso.\n");
+    printf("Arquivo MEPA gerado: %s\n", gerador_saida());
 
     if (opcoes->gerar_symtab)
     {

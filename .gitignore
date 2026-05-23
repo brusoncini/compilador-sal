@@ -1,5 +1,4 @@
 salc
-arquivo.sal
 .vscode/
 
 *.exe
@@ -7,3 +6,5 @@ arquivo.sal
 *.tk
 *.ts
 *.trc
+*.sal
+*.mepa

@@ -1,6 +1,6 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -std=c99
-OBJS = main.o lex.o parser.o symtab.o diag.o opt.o log.o
+OBJS = main.o lex.o parser.o symtab.o diag.o opt.o log.o gerador.o
 EXEC = salc
 
 all: $(EXEC)
@@ -29,5 +29,8 @@ opt.o: opt.c opt.h
 log.o: log.c log.h lex.h symtab.h
 	$(CC) $(CFLAGS) -c log.c
 
+gerador.o: gerador.c gerador.h
+	$(CC) $(CFLAGS) -c gerador.c
+	
 clean:
 	rm -f *.o $(EXEC) *.tk *.ts *.trc
